@@ -293,8 +293,8 @@ namespace MiniSTL
             //调整free_list，回收区块
             //p是要回收的起始位置
             q->free_list_link = *my_free_list;//指向这个区块的开头了  相当于整个回收了
-            *my_free_list = q;//起始位置p=q 只是类型不同
-        }
+            *my_free_list = q;//起始位置p=q 只是类型不同 
+        }  
     }
     void * __default_alloc::reallocate(void* p,size_t old_sz,size_t new_sz){
         void *result;
