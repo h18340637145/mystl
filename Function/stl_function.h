@@ -460,7 +460,7 @@ namespace MiniSTL{
     };
 
     template<class S,class T>
-    class const_mem_fun_t : public unary_function<const T,S>{
+    class const_mem_fun_ref_t : public unary_function<const T,S>{
     public :
         explicit const_mem_fun_t(S (T::*pf)() const) : f(pf){}
         S operator()(const T& r) const{
@@ -556,7 +556,7 @@ namespace MiniSTL{
 
     template<class T>
     //<void,T>
-    class const_mem_fun_ref_t : public unary_function< T,void>{
+    class const_mem_fun_ref_t<T,void> : public unary_function< T,void>{
     private:
         void (T::*f)() const;
     public:
@@ -610,7 +610,126 @@ namespace MiniSTL{
             (r.*f)(x);
         }
     };
-    
+
+    // 返回一个对象，此对象中包含了指向友元类函数的函数指针，使用当前对象
+    // obj(友元类对象的指针)
+    template<class S,class T>
+    inline mem_fun_t<S,T> mem_fun(S (T::*f)()){//提供一个函数指针
+        return mem_fun_t<S,T>(f);
+    }
+
+    //重载
+    template<class S,class T>
+    inline const_mem_fun_t<S,T> mem_fun(S (T::*f)() const){
+        return const_mem_fun_t<S,T>(f);
+    }
+
+    template<class S, class T>
+    inline mem_fun_ref_t<S,T> mem_fun_ref(S (T::*f)()){
+        return mem_fun_ref_t<S,T>(f);
+    }
+
+    template<class S,class T>
+    inline const_mem_fun_ref_t<S,T> mem_fun_ref(S (T::*f)()){
+        return const_mem_fun_ref_t<S,T>(f);
+    }
+
+    template<class S,class T,class Arg>
+    inline mem_fun1_t<S,T,Arg> mem_fun(S (T::*f)(Arg)) {
+        return mem_fun1_t<S,T,Arg>(f);
+    }
+
+    template<class S,class T , class Arg>
+    inline const_mem_fun1_t<S,T,Arg> mem_fun(S (T::*f)(Arg) const){
+        return const_mem_fun1_t<S,T,Arg>(f);
+    }
+
+    template<class S,class T,class Arg>
+    inline mem_fun1_ref_t<S,T,Arg> mem_fun_ref(S (T::*f)(Arg)){
+        return mem_fun1_ref_t<S,T,Arg>(f);
+    }
+
+    template<class S,class T, class Arg>
+    inline const_mem_fun1_ref_t<S,T,Arg> mem_fun_ref(S (T::*f)(Arg) const){
+        return const_mem_fun1_ref_t<S,T,Arg>(f);
+    }
 
 
+    template<class S, class T,class Arg>
+    inline mem_fun1_t<S,T,Arg> mem_fun1(S (T::*f)(Arg)){
+        return mem_fun1_t<S,T,Arg>(f);
+    }
+
+    template<class S,class T,class Arg>
+    inline const_mem_fun1_t<S,T,Arg> mem_fun1(S (T::*f)(Arg) const){
+        return const_mem_fun1_t<S,T,Arg>(f);
+    }
+
+    template<class S,class T,class Arg>
+    inline mem_fun1_ref_t<S,T,Arg> mem_fun1_ref(S (T::*f)(Arg)){
+        return mem_fun1_ref_t<S,T,Arg>(f);
+    }
+
+    template<class S,class T,class Arg>
+    inline const_mem_fun1_ref_t<S,T,Arg> mem_fun1_ref(S (T::*f)(Arg)){
+        return const_mem_fun1_ref_t<S,T,Arg>(f);
+    }
+
+
+    /***
+     * pair结构
+     * 
+     */
+
+    template<class T1,class T2>
+    struct pair
+    {
+        using first_type = T1;
+        using second_type = T2;
+
+        first_type first;
+        second_type second;
+
+        pair() : first(first_type()) , second(second_type()){}
+        pair(const first_type & a,const second_type& b) :
+            first(a) , second(b){}
+        
+        template<class U1 , class U2>
+        pair(const pair<U1,U2> &rhs) : first(rhs.first), second(rhs.second){}
+    };
+
+    // pair 类型的比较运算符
+    template<class T1,class T2>
+    inline bool operator==(const pair<T1,T2>&lhs , const pair<T1,T2>& rhs){
+        return lhs.first == rhs.first && lhs.second == rhs.second;
+    }
+
+    template<class T1,class T2>
+    inline bool operator!=(const pair<T1,T2> &lhs,const pair<T1,T2>&rhs){
+        return !(lhs == rhs);
+    }
+
+    template<class T1,class T2>
+    inline bool operator<(const pair<T1,T2> &lhs, const pair<T1,T2>& rhs){
+        return lhs.first < rhs.first  || !(lhs.first < lhs.first) && lhs.second < rhs.second;
+    }
+
+    template<class T1,class T2>
+    inline bool operator>(const pair<T1,T2> &lhs,const pair<T1,T2> &rhs){
+        return rhs < lhs;
+    }
+    template<class T1, class T2>
+    inline bool operator<=(const pair<T1,T2>& lhs, const pair<T1,T2>& rhs){
+        return !(rhs<lhs);
+    }
+    template<class T1,class T2>
+    inline bool operator>=(const pair<T1,T2>&lhs,const pair<T1,T2>& rhs){
+        return !(lhs < rhs);
+    }
+
+    //make pair
+    template<class T1,class T2>
+    inline pair<T1,T2> make_pair(const T1 & first,const T2 & second){
+        return pair<T1,T2>(first,second);
+    }
 }
