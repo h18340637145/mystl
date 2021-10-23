@@ -674,13 +674,6 @@ namespace MiniSTL{
     inline const_mem_fun1_ref_t<S,T,Arg> mem_fun1_ref(S (T::*f)(Arg)){
         return const_mem_fun1_ref_t<S,T,Arg>(f);
     }
-
-
-    /***
-     * pair结构
-     * 
-     */
-
     template<class T1,class T2>
     struct pair
     {
