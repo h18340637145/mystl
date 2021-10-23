@@ -167,7 +167,7 @@ namespace MiniSTL
     }
 
     template<class InputIterator,class OutputIterator>
-    struct __copy_dispatch{
+    struct __copy_dispatch{//仿函数对象
         //仿函数对象
         OutputIterator operator()(InputIterator first,InputIterator last,
                                 OutputIterator result){
@@ -175,6 +175,13 @@ namespace MiniSTL
             return __copy(first,last,result,
                             iterator_category_t<InputIterator>());
         }
+    };
+
+    //偏特化处理
+    template<class T>
+    struct __copy_dispatch<T*,T*>
+    {
+        /* data */
     };
     
 } // namespace MiniSTL
