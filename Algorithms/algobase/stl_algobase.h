@@ -1,6 +1,16 @@
 #pragma once
 
 namespace MiniSTL{
+// STL中的仿函数大致可以分为三个类
+// 1.算数类
+// 2.逻辑运算类
+// 3.相对关系类
+
+// 所有的STL仿函数都需要继承binary_function<T, T, bool>(两个参数)
+// 或者unary_function<T, bool>(一个参数),
+// 只有继承自这两种父类,你声明的仿函数才可以融入STL
+
+
     //一元运算符
     //两个参数  1  返回值
     template<class Arg,class Result>
@@ -210,26 +220,108 @@ namespace MiniSTL{
         }
     };
     
-    //函数适配器  下面的
+
+
+    //函数适配器  下面的 ======== 函数对象绑定器 也是一种函数对象
     //less<int>()就是二元谓词对象
-    //bind2nd(less<int>(),40) 是一元谓词对象 
+    //bind2nd(less<int>(),40) 是一元谓词对象 ----将40 绑定到less函数的第二个参数上
+    
+    //取某个Adaptable predicate的逻辑负值
     template<class Predicate>
-    class unary_negate
+    class unary_negate   //一元适配器继承自一元仿函数  一元仿函数的参数
         : public unary_function<typename Predicate::argument_type,bool>{
     protected:
         Predicate pred;//一元谓词对象
-
+    //Predicate 是一个unary_function 的派生类 是一个函数类类型
     public:
         explicit unary_negate(const Predicate &x) : pred(x){}
         bool operator()(const typename Predicate::argument_type & x) const{
-            return !pred(x);
+            return !pred(x);//构造一个一元谓词对象  取反
+            //本身是一个函数类对象  调用函数  obj(param)
         }
     };
 
+    template<class Predicate>
+    inline unary_negate<Predicate> not1(const Predicate &pred){
+        //取反   not1是构造一个与谓词结果相反的一元函数对象。
+        return unary_negate<Predicate>(pred);
+        //A(param)    其中param是一个仿函数对象  比如 less<>
+    }
 
+    template<class Predicate>
+    class binary_negate
+        : public binary_function<typename Predicate::first_argument_type,
+                                typename Predicate::second_argument_type,
+                                bool>{
+    protected:
+        Predicate pred;//函数类对象
+    public:
+        explicit binary_negate(const Predicate & x):pred(x){}
+        bool operator()(const typename Predicate::first_argument_type &x,
+                    const typename Predicate::second_argument_type &y){
+            return !pred(x,y);
+        }
+    };
 
+    template<class _Predicate>
+    inline binary_negate<_Predicate> not2(const _Predicate &pred){
+        return binary_negate<_Predicate>(pred);//obj(param)  调用仿函数
+    }
 
+//传递进来的参数一定是二元仿函数和一个参数，其中二元仿函数的第一个参数提取出来，
+    template<class Operation>
+    class binder1st
+        : public unary_function<typename Operation::second_argument_type,
+                                typename Operation::result_type>{
+    protected:
+        Operation op;
+        typename Operation::first_argument_type value;
 
+    public:
+        binder1st(const Operation &x,
+                const typename Operation::first_argument_type &y)
+            :op(x) , value(y){}
+        
+        typename Operation::result_type operator()(
+            const typename Operation::second_argument_type &x
+        )const {
+            return op(value,x);//调用表达式，将value作为第一个参数
+        }
+    };
+    //bind2nd(less<int>(),40) 是一元谓词对象 ----将40 绑定到less函数的第二个参数上
+    //op ---less     value---40
+
+    template<class Operation,class T>
+    inline binder1st<Operation> bind1st(const Operation &op,const T& x){
+        using Arg1_Type = typename Operation::first_argument_type;
+        return binder1st<Operation>(op,static_cast<Arg1_Type>(x));
+    }
+
+    template<class Operation>
+    class binder2nd:public unary_function<typename Operation::first_argument_type,
+                                            typename Operation::result_type>{
+    protected:
+        Operation op;
+        typename Operation::second_argument_type value;
+
+    public:
+        binder2nd(const Operation &x
+                    const typename Operation::second_argument_type &y)
+            :op(x) ,value(y){}
+        typename Operation::result_type operator()(
+            const typename Operation::first_argument_type &x
+        )const{
+            return op(x,value);
+        }
+    };
+
+    template<class Operation,class T>
+    inline binder2nd<Operation> bind2nd(const Operation &op,const T &x){
+        using Arg2_type = typename Operation::second_argument_type;
+        return binder2nd<Operation>(op,Arg2_type(x));
+    }
+
+    
     
     
 }
