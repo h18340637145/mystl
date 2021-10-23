@@ -1,7 +1,7 @@
 #pragma once
 
 #include <new> // placement new 
-#include "typeTrits.h"
+#include "typeTraits.h"
 //
 //作用：对已分配的内存进行调用构造函数和析构函数
     // 调用构造函数使用p指针，和_T1类型的构造函数进行初始化

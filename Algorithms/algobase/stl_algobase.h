@@ -177,11 +177,58 @@ namespace MiniSTL
         }
     };
 
-    //偏特化处理
     template<class T>
     struct __copy_dispatch<T*,T*>
     {
-        /* data */
+        T* operator()(const T* first,const T* last,T*result ){
+            using t = typename _type_traits<T>::has_trival_assignment_operator;
+            return __copy_t(first,last,result,t());
+        }
     };
+
+    template<class InputIterator,class OutputIterator>
+    inline OutputIterator copy(InputIterator first,InputIterator last,
+    OutputIterator result){
+        return __copy_dispatch<InputIterator,OutputIterator>()(
+            first,last,result
+        );//__copy_dispatch 是一个仿函数对象
+    }
+//针对指针偏特化
+    inline char * copy(const char * first , const char * last,char * result){
+        memmove(result,first,last-first);
+        return result+(last-first);
+    }
+
+    //InputIterator
+    template<class InputIterator,class OutputIterator>
+    inline OutputIterator __copy(InputIterator first,InputIterator last,
+    OutputIterator result,input_iterator_tag){
+        for(;first!=last;++first,++result){
+            *result = *first;//result 也在向后移动
+        }
+    }
+
+    //RandomIterator
+    template<class InputIterator,class OutputIterator,class Distance>
+    inline OutputIterator __copy_d(InputIterator first,InputIterator last,
+    OutputIterator result,random_access_iterator_tag){
+        return __copy_d(first,last,result,
+        difference_type_t<InputIterator>());
+    }
+
+    template<class  InputIterator , class OutputIterator,class Distance>
+    inline OutputIterator __copy_d(InputIterator first, InputIterator last,
+    OutputIterator result,Distance){
+        for(Distance n = last - first ; n > 0; n--,first++ , last--){
+            *result = * first;
+        }
+        return result;
+    }
+
+    
+
+
+
+
     
 } // namespace MiniSTL
