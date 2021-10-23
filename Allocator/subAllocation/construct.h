@@ -3,10 +3,10 @@
 #include <new> // placement new 
 #include "typeTrits.h"
 //
-//×÷ÓÃ£º¶ÔÒÑ·ÖÅäµÄÄÚ´æ½øĞĞµ÷ÓÃ¹¹Ôìº¯ÊıºÍÎö¹¹º¯Êı
-    // µ÷ÓÃ¹¹Ôìº¯ÊıÊ¹ÓÃpÖ¸Õë£¬ºÍ_T1ÀàĞÍµÄ¹¹Ôìº¯Êı½øĞĞ³õÊ¼»¯
-    //Îö¹¹º¯Êı  ÅĞ¶Ï_value_typeÀàĞÍÊÇ·ñÓĞ  ÎŞ¼ÛÖµµÄÎö¹¹º¯Êı   £¨podÀàĞÍ¶¼ÓĞÎŞ¼ÛÖµµÄ ctor£©  
-    // ¶ÔÓÚÎŞ¼ÛÖµµÄ -- ²»×öÎö¹¹º¯Êıµ÷ÓÃ´¦Àí
+//ä½œç”¨ï¼šå¯¹å·²åˆ†é…çš„å†…å­˜è¿›è¡Œè°ƒç”¨æ„é€ å‡½æ•°å’Œææ„å‡½æ•°
+    // è°ƒç”¨æ„é€ å‡½æ•°ä½¿ç”¨pæŒ‡é’ˆï¼Œå’Œ_T1ç±»å‹çš„æ„é€ å‡½æ•°è¿›è¡Œåˆå§‹åŒ–
+    //ææ„å‡½æ•°  åˆ¤æ–­_value_typeç±»å‹æ˜¯å¦æœ‰  æ— ä»·å€¼çš„ææ„å‡½æ•°   ï¼ˆpodç±»å‹éƒ½æœ‰æ— ä»·å€¼çš„ ctorï¼‰  
+    // å¯¹äºæ— ä»·å€¼çš„ -- ä¸åšææ„å‡½æ•°è°ƒç”¨å¤„ç†
 namespace MiniSTL{
     template<class T1,class T2>
     inline void construct(T1 *p,T2 value){
@@ -18,30 +18,30 @@ namespace MiniSTL{
         p->~T();
     }
 
-    //Éè·¨ÀûÓÃtraitsÅúÁ¿Îö¹¹¶ÔÏó
+    //è®¾æ³•åˆ©ç”¨traitsæ‰¹é‡ææ„å¯¹è±¡
     template <class ForwardIterator>
     inline void destory(ForwardIterator beg,ForwardIterator end){
         using is_POD_type =  typename _type_traits<ForwardIterator>::is_POD_type;
-        //podÀàĞÍµÄ  ²»ÓÃÎö¹¹
+        //podç±»å‹çš„  ä¸ç”¨ææ„
         _destory_aux(beg,end,is_POD_type());
     }
 
-    //Èç¹ûÔªËØµÄvalue_type²»´æÔÚnon_trival destructor
-    //Ò»°ãµÄÀàÀàĞÍ  ²»ÊÇpodÀàĞÍ_false_type   ĞèÒªÎö¹¹
+    //å¦‚æœå…ƒç´ çš„value_typeä¸å­˜åœ¨non_trival destructor
+    //ä¸€èˆ¬çš„ç±»ç±»å‹  ä¸æ˜¯podç±»å‹_false_type   éœ€è¦ææ„
     template <class ForwardIterator>
     inline void _destory_aux(ForwardIterator beg,ForwardIterator end,
     _false_type){
         for(; beg != end ; ++beg){
-            destory(&*beg);   //  *beg  µü´úÆ÷Ö¸ÏòµÄÄÚÈİ  &(*beg) ¶Ôµü´úÆ÷Ö¸ÏòµÄÄÚÈİÈ¡µØÖ·
-        }//±Ï¾¹µü´úÆ÷²»ÊÇÕæÕıµÄµØÖ·
+            destory(&*beg);   //  *beg  è¿­ä»£å™¨æŒ‡å‘çš„å†…å®¹  &(*beg) å¯¹è¿­ä»£å™¨æŒ‡å‘çš„å†…å®¹å–åœ°å€
+        }//æ¯•ç«Ÿè¿­ä»£å™¨ä¸æ˜¯çœŸæ­£çš„åœ°å€
     }
 
-    //´æÔÚtrival destructor  _true_type   ÊÇpodÀàĞÍ --- ÎŞ¼ÛÖµ¹¹Ôì---²»ĞèÒªÎö¹¹---¿ÕÊµÏÖ
-    //Èç¹û¶ÔÏóµÄÎö¹¹º¯ÊıÎŞ¹ØÍ´Ñ÷   ÄÇÃ´·´¸´µ÷ÓÃËüÊÇÒ»ÖÖĞ§ÂÊÉÏµÄ¾Ş´óÀË·Ñ
+    //å­˜åœ¨trival destructor  _true_type   æ˜¯podç±»å‹ --- æ— ä»·å€¼æ„é€ ---ä¸éœ€è¦ææ„---ç©ºå®ç°
+    //å¦‚æœå¯¹è±¡çš„ææ„å‡½æ•°æ— å…³ç—›ç—’   é‚£ä¹ˆåå¤è°ƒç”¨å®ƒæ˜¯ä¸€ç§æ•ˆç‡ä¸Šçš„å·¨å¤§æµªè´¹
     template<class ForwardIterator>
     inline void _destory_aux(ForwardIterator,ForwardIterator,_true_type){}
 
-    //Õë¶Ôchar* wchar_t* µÄÌØ»¯  ×Ö·û´®£¿ pod£¿
+    //é’ˆå¯¹char* wchar_t* çš„ç‰¹åŒ–  å­—ç¬¦ä¸²ï¼Ÿ podï¼Ÿ
     inline void destory(char * , char * ){}
     inline void destory(wchar_t*, wchar_t *){}
 }

@@ -4,7 +4,7 @@
 #include "construct.h"
 
 namespace MiniSTL{
-    //Ä¬ÈÏ¶ş¼¶ÅäÖÃÆ÷
+    //é»˜è®¤äºŒçº§é…ç½®å™¨
     template <class T, class Alloc = __default_alloc>
     class simpleAlloc{
     public: 
@@ -17,7 +17,7 @@ namespace MiniSTL{
         using difference_type = ptrdiff_t;
 
     public:
-    //·ÖÅäÄÚ´æ¿Õ¼ä  ÊÍ·ÅÄÚ´æ¿Õ¼ä
+    //åˆ†é…å†…å­˜ç©ºé—´  é‡Šæ”¾å†…å­˜ç©ºé—´
         static T* allocate();
         static T* allocate(size_t n);
         static void deallocate(T* ptr);
@@ -29,43 +29,43 @@ namespace MiniSTL{
         static void destory(T* first, T* last);
     };
 
-    //¾²Ì¬·½·¨
+    //é™æ€æ–¹æ³•
     template<class T,class Alloc>
-    //ÎŞ²Î·ÖÅä  ±¾ÖÊÊÇ·ÖÅäÒ»¿é´óĞ¡Îªµ±Ç°ÀàĞÍµÄ¿Õ¼ä
+    //æ— å‚åˆ†é…  æœ¬è´¨æ˜¯åˆ†é…ä¸€å—å¤§å°ä¸ºå½“å‰ç±»å‹çš„ç©ºé—´
     T* simpleAlloc<T,Alloc>::allocate(){
         return reinterpret_cast<T*>(Alloc::allcate(sizeof(T)));
     }
     
     template<class T,class Alloc>
-    //size n ·ÖÅä
+    //size n åˆ†é…
     T* simpleAlloc<T,Alloc>::allocate(size_t n){
         if(n == 0) {
             return 0;
         }
-        return reinterpret_cast<T*>(Alloc::allocate(sizeof(T) * n));//·ÖÅäµ±Ç°ÀàĞÍ*n¿éµÄ¿Õ¼ä
+        return reinterpret_cast<T*>(Alloc::allocate(sizeof(T) * n));//åˆ†é…å½“å‰ç±»å‹*nå—çš„ç©ºé—´
     }
 
-    //deallocateÊÍ·Å
+    //deallocateé‡Šæ”¾
     template<class T, class Alloc>
     void simpleAlloc<T,Alloc>::deallocate(T* ptr){
         Alloc::deallocate(reinterpret_cast<void*>(ptr),sizeof(T));
-        //ÊÍ·ÅptrÖ¸ÏòµÄ Ò»¸öÀàĞÍÄÇÃ´´óµÄ¿Õ¼ä
+        //é‡Šæ”¾ptræŒ‡å‘çš„ ä¸€ä¸ªç±»å‹é‚£ä¹ˆå¤§çš„ç©ºé—´
     }
 
     template<class T,class Alloc>
     void simpleAlloc<T,Alloc>::deallocate(T* ptr,size_t n){
-        //ÊÍ·ÅptrÖ¸ÏòµÄ  nÕâÃ´´óµÄ¿Õ¼ä
+        //é‡Šæ”¾ptræŒ‡å‘çš„  nè¿™ä¹ˆå¤§çš„ç©ºé—´
         if(n == 0){
             return ;
         }
         Alloc::deallocate(reinterpret_cast<void*>(ptr),sizeof(T) * n);
-        //ÊÍ·Å´ÓptrÖ¸ÏòµÄµØ·½¿ªÊ¼  n*ÀàĞÍÄÇÃ´´óµÄ¿Õ¼ä
+        //é‡Šæ”¾ä»ptræŒ‡å‘çš„åœ°æ–¹å¼€å§‹  n*ç±»å‹é‚£ä¹ˆå¤§çš„ç©ºé—´
     }
 
-    //¹¹Ôì
+    //æ„é€ 
     template<class T, class Alloc>
     void simpleAlloc<T,Alloc>::construct(T* ptr){
-        new (ptr) T();// ÔÚptrÖ¸ÏòµÄÎ»ÖÃ  µ÷ÓÃTµÄ¹¹Ôìº¯Êı
+        new (ptr) T();// åœ¨ptræŒ‡å‘çš„ä½ç½®  è°ƒç”¨Tçš„æ„é€ å‡½æ•°
     }
 
     template<class T,class Alloc>
@@ -73,15 +73,15 @@ namespace MiniSTL{
         new (ptr) T(value);
     }
 
-    //Îö¹¹
+    //ææ„
     template<class T,class Alloc>
     void simpleAlloc<T,Alloc>::destory(T *ptr){
-        //Îö¹¹ptrÖ¸ÏòµÄ 
+        //ææ„ptræŒ‡å‘çš„ 
         ptr->~T();
     }
 
     template<class T,class Alloc>
-    //Îö¹¹Çø¼äÒ»´Îµ÷ÓÃµü´úÆ÷Ö¸ÏòµÄ¶ÔÏóµÄÎö¹¹ first->~T()
+    //ææ„åŒºé—´ä¸€æ¬¡è°ƒç”¨è¿­ä»£å™¨æŒ‡å‘çš„å¯¹è±¡çš„ææ„ first->~T()
     void simpleAlloc<T,Alloc>::destory(T* first,T * last){
         for(;first != last;++first){
             first->~T();
