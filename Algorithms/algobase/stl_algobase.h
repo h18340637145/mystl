@@ -131,10 +131,50 @@ namespace MiniSTL
         return result != 0 ? result < 0 :len1 < len2;
     }
 
+
+    template<class InputIterator1,class InputIterator2>
+    pair<InputIterator1,InputIterator2> mismatch(InputIterator1 first1,
+                                                InputIterator1 last1,
+                                                InputIterator2 first2,
+                                                InputIterator2 last2){
+                                                
+        while(first1 ! last1 && (*first1 == *first2)){
+            ++first1;
+            ++first2;
+        }
+        return pair<InputIterator1,InputIterator2>(first1,first2);
+    }
     //显然要求序列1长于序列2
     // mismathch 找到两个容器中，第一个不匹配所出现的位置 it1 和it2
-    
-    
+    template<class InputIterator1,class InputIterator2,class BinaryPredicate>
+    pair<InputIterator1,InputIterator2> mismatch(InputIterator1 first1,
+                                                InputIterator1 last1,
+                                                InputIterator2 first2,
+                                                InputIterator2 last2,
+                                                BinaryPredicate binary_pred){
+        while(first1 ! last1 && binary_pred(*first1,*first2)){
+            ++first1;
+            ++first2;
+        }
+        return pair<InputIterator1,InputIterator2>(first1,first2);
+    }
 
+    template<class T>
+    inline void swap(T & a, T & b){
+        T temp = a;
+        a = b;
+        b = temp;
+    }
 
+    template<class InputIterator,class OutputIterator>
+    struct __copy_dispatch{
+        //仿函数对象
+        OutputIterator operator()(InputIterator first,InputIterator last,
+                                OutputIterator result){
+            //后续实现
+            return __copy(first,last,result,
+                            iterator_category_t<InputIterator>());
+        }
+    };
+    
 } // namespace MiniSTL
