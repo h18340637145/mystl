@@ -177,12 +177,24 @@ namespace MiniSTL
         }
     };
 
+//偏特化处理
     template<class T>
     struct __copy_dispatch<T*,T*>
     {
-        T* operator()(const T* first,const T* last,T*result ){
+        T* operator()( T* first, T* last,T* result ){
+            //是否有冗余的=运算符（pod没有，类有）
             using t = typename _type_traits<T>::has_trival_assignment_operator;
-            return __copy_t(first,last,result,t());
+            return __copy_t(first,last,result,t());//目的迭代器result
+        }
+    };
+    //偏特化处理
+    template<class T>
+    struct __copy_dispatch<const T*, T*>
+    {
+        T* operator()(const T* first, const T* last,T* result ){
+            //是否有冗余的=运算符（pod没有，类有）
+            using t = typename _type_traits<T>::has_trival_assignment_operator;
+            return __copy_t(first,last,result,t());//目的迭代器result
         }
     };
 
@@ -191,44 +203,123 @@ namespace MiniSTL
     OutputIterator result){
         return __copy_dispatch<InputIterator,OutputIterator>()(
             first,last,result
-        );//__copy_dispatch 是一个仿函数对象
+        );//__copy_dispatch 是一个仿函数对象  调用对象的()运算符
     }
 //针对指针偏特化
     inline char * copy(const char * first , const char * last,char * result){
-        memmove(result,first,last-first);
-        return result+(last-first);
+        memmove(result, first, last - first);//将first的内容赋值到result中
+        return result + (last - first);//尾指针
+    }
+
+    inline wchar_t* copy(const wchar_t * first, const wchar_t *last,
+                        wchar_t * result){
+        memmove(result, first, sizeof(wchar_t) * (last - first));
+        return result + (last - first );
     }
 
     //InputIterator
     template<class InputIterator,class OutputIterator>
     inline OutputIterator __copy(InputIterator first,InputIterator last,
-    OutputIterator result,input_iterator_tag){
+                            OutputIterator result,input_iterator_tag){
+        //单向迭代器的操作方式就是从头到W尾的遍历
         for(;first!=last;++first,++result){
             *result = *first;//result 也在向后移动
         }
+        return result;
+    }
+
+    //RandomIterator
+    template<class InputIterator,class OutputIterator>
+    inline OutputIterator __copy(InputIterator first, InputIterator last,
+                                OutputIterator result,
+                                random_access_iterator_tag){
+        return __copy_d(first, last, result,
+                        difference_type_t<InputIterator>());//再细分函数以便使用
     }
 
     //RandomIterator
     template<class InputIterator,class OutputIterator,class Distance>
     inline OutputIterator __copy_d(InputIterator first,InputIterator last,
-    OutputIterator result,random_access_iterator_tag){
-        return __copy_d(first,last,result,
-        difference_type_t<InputIterator>());
-    }
-
-    template<class  InputIterator , class OutputIterator,class Distance>
-    inline OutputIterator __copy_d(InputIterator first, InputIterator last,
-    OutputIterator result,Distance){
-        for(Distance n = last - first ; n > 0; n--,first++ , last--){
-            *result = * first;
+                                OutputIterator result,Distance){
+        for(Distance n = last - first; n > 0 ; --n, ++first, ++result){
+            *result = *first;
         }
         return result;
     }
 
+    //具备trivial copy assignment operator  可执行memmove
+    template<class T>
+    inline T* __copy_t(const T* first, const T* last,T *result,_true_type){
+        memove(result, first,sizeof(T) * (last - first));
+        return result + (last - first);
+    }
+
+    //原始指针是一种random_access_iterator
+    //字符串类型
+    template<class T>
+    inline T *__copy(const T* first, const T* last,T* result,_false_type){
+        return __copy_d(first, last,result, ptrdiff_t());
+    }
+
+    //逆序拷贝  从末尾向前拷贝   双向迭代器 ， 遍历走法
+    //给出目的的尾迭代器   
+    template<class BidirectionalIter1, class BidirectionalIter2, class Distance>
+    inline BidirectionalIter2 __copy_backward(BidirectionalIter1 first,
+                                            BidirectionalIter1 last,
+                                            BidirectionalIter2 result,
+                                            bidirectional_iterator_tag,
+                                                Distance){
+        while(first != last){
+            *--result = *--last;
+        }
+        return result;
+    }
+
+    //随机迭代器
+    template<class RandomAccessIter, class BidirectionalIter2,class Distance>
+    inline BidirectionalIter2 __copy_backward(RandomAccessIter first,
+                                            RandomAccessIter last,
+                                            BidirectionalIter2 result,
+                                            random_access_iterator_tag,
+                                            Distance){
+        for(Distance n = last - first; n > 0;--n){
+            *--result = *--last;
+        }
+        return result;
+    }
+
+    //dispatch  调用仿函数
+    template<class BidirectionalIter1, class BidirectionalIter2, class BoolType>
+    struct __copy_backward_dispatch{
+        BidirectionalIter2 operator()(BidirectionalIter1 first,
+                                    BidirectionalIter1 last,
+                                    BidirectionalIter2 result){
+            return __copy_backward(first, last, result,
+                                    iterator_category_t<BidirectionalIter1>(),
+                                    difference_type_t<BidirectoinalIter1>());
+        }
+    };
+
+    template<class T>
+    struct __copy_backward_dispatch<T *,T *, _true_type> {
+        T* operator()(const T* first, const T * last, T* result){
+            const ptrdiff_t n = last - first;
+            memmove(result - n, first, sizeof(T) * n);
+            return result - n;
+        }
+    };
     
+    template<class T>
+    struct __copy_backward_dispatch<const T *,T *, _true_type>
+    {
+        T * operator()(const T * first , const T * last, T * result){
+            return __copy_backward_dispatch<T *,T *,_true_type>()(first,last,result);
+        }
+    };
 
-
-
-
-    
+    template <class BT1 ,class BT2>
+    inline BT2 copy_backward(BT1 first, BT1 last, BT2 result){
+        using Trival = typename _type_traits<value_type_t<BT2>>::has_trival_assignment_operator;
+        return __copy_backward_dispatch<BT1,BT2,Trival>()(first, last, result);
+    }    
 } // namespace MiniSTL
