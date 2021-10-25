@@ -258,8 +258,79 @@ namespace MiniSTL
     template<class T,class Alloc>
     void vector<T,Alloc>::insert_aux(iterator position, const value_type & value){
         if(finish != end_of_storage){//仍然有空间
-            construct(finish, *(finish - 1));
+            construct(finish, *(finish - 1));//末尾出构造一个
             ++finish;
+            value_type value_copy = value;//stl copy in copy out
+            MiniSTL::copy_backward(position, finish - 2, finish - 1);
+            //相当于将position后面 后面的元素都向后移动一个单位
+            //finish指向最后一个元素后面的那个位置  finish-2  相当于未添加前的finish-1 即末尾元素
+            //finish-1即未添加前的end() 将[end()-1  到position)这个反向区间的数  一次移动到[end(),开头的这个地方
+            *position = value_copy;
+        }else{
+            //expand   扩容
+            const size_type = old_size = size();
+            const size_type new_size =   //不是0  就扩一倍  否则  就是1
+                old_size() ? 2 * old_size : 1;//new_cap = 2 * old_cap
+            iterator new_start = data_allocator::allocate(new_size);
+            iterator new_finish = new_start;//扩容之后，，没有元素 
+            try {
+                new_finish = MiniSTL::uninitialized_copy(
+                    start, position, new_start
+                );//复制前一段，position)
+                construct(new_finish,value);
+                ++new_finish;
+                // [postition,..
+                new_finish = MiniSTL::uninitialized_copy(
+                    position, finish, new_finish
+                );//拷贝第二段 ， new_finish)    指向末尾
+            }catch(std::exception&){
+                //commit or callback
+                //出现异常的时候，销毁新创建的扩容空间，重新分配一块new_size大小的空间
+                destory(new_start, new_finish);
+                data_allocator::deallocate(new_start, new_size);
+                throw; 
+            }
+
+            destory_and_deallocate();  //销毁start ， finish(原空间)  重新分配newstart，endof-start
+            start = new_start;
+            finish = new_finish;
+            end_of_storage = new_start + new_size;
+        }
+    }
+
+    template<class T,class Alloc>
+    template<class InputIterator>
+    void vector<T,Alloc>::range_insert(iterator pos, InputIterator first,
+                                    InputIterator last, input_iterator_tag){
+        for(; first != last; ++first){
+            //从pos开始插入一个迭代器区间的元素
+            //开始的pos  [pos
+            pos = insert(pos, *first);
+            ++pos;
+        }
+    }
+    template<class T, class Alloc>
+    template<class ForwardIterator>
+    void vector<T,Alloc>::range_insert(iterator position, ForwardIterator first,
+                                    ForwardIterator last, forward_iterator_tag){
+        if(first != last){
+            size_type n = MiniSTL::distance(first, last);
+            if(static_cast<size_type>(end_of_storage - finish) >= n){
+                //当前vector容量可以容纳新插入的n个元素，那么开始插入
+                const size_type elem_after = finish - position;
+                iterator old_finish = finish;
+                if(elems_after > n){//插入的值少与主区间 防止重叠  在其中挖出n个空间
+                    MiniSTL::uninitialized_copy(finish - n, finish, finish);  // finish-n  放置到finish中
+                    // 移出finish区间
+                    finish += n; 
+                    // 末尾移动至 oldfinish处
+                    MiniSTL::copy_backward(position, old_finish - n, old_finish);
+                    //插入
+                    MiniSTL::copy(position, position + n, position);//末尾这个不是first?
+                }else{
+
+                }
+            }
         }
     }
 } // namespace MiniSTL
