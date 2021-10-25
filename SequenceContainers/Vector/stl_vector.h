@@ -159,12 +159,107 @@ namespace MiniSTL
         }
 
         void reserve(size_type);//分配新容量空间
-        void shrink_to_fit() noexcept{
-            vector temp(*this);
+        void shrink_to_fit() noexcept{ //收缩到合适??
+            vector temp(*this); 
             swap(temp);
         }
+    public:// compare operator (member function)
+        bool operator==(const vector&) const noexcept;
+        bool operator!=(const vector& rhs) const noexcept{  //借用operator==
+            return !(*this == rhs);
+        }
+
+    public://push pop
+        void push_back(const value_type &);
+        void pop_back(){
+            --finish;
+            destory(finish);
+        }
+
+    public: // erase
+        iterator erase(iterator, iterator);//删除区间
+        iterator erase(iterator position){//删除一个
+            return erase(position, position + 1);
+        }
+        void clear(){//删除区间   全部头---尾
+            erase(begin(),end());
+        }
+    private:
+        //aux_interface for insert
+        void insert_aux(iterator , const value_type&);//插入一个
+        void fill_insert(iterator, size_type, const value_type &);//插入n个value
+        //迭代器区间插入
+        template<class InputIterator>
+        void range_insert(iterator pos, InputIterator first, InputIterator last,
+                        insert_iterator_tag);
         
+        template<class ForwardIterator>
+        void range_insert(iterator pos, ForwardIterator first, ForwardIterator last, forward_iterator_tag);
 
+        template<class Integer> //迭代器处  插入n个值
+        void insert_dispatch(iterator pos, Integer n, Integer value, _true_type){
+            fill_insert(pos, static_cast<int>(n), value_type(value));
+        }
+        
+        template<class InputIterator>//迭代器处   出入一个区间的值  正向迭代器 基类对象接受
+        void insert_dispatch(iterator pos, InputIterator first, InputIterator last, _false_type){
+            range_insert(pos, first, last, iterator_category_t<InputIterator>());
+        }
 
+    public:
+    //insert
+        iterator insert(iterator);
+        iterator insert(iterator, const value_type &);
+        template<class InputIterator>
+        void insert(iterator pos, InputIterator first, InputIterator last){
+            insert_dispatch(pos, first, last, _is_integer_t<InputIterator>()); 
+            //是否是pod类型  重载自行选择
+        }
+    
+    private:
+        //aux_interface for assign   aux_interface---接口  assign----顺次拷贝一个对象到另一个对象
+        void fill_assign(size_type, const value_type&);//n个数  都填写val
+        template<class Integer>
+        void assign_dispatch(Integer n, Integer val, _true_type){
+            fill_assgin(static_cast<size_type>(n), static_cast<value_type>(val));
+        }
+        template<class InputIterator>
+        void assign_dispatch(InputIterator first, InputIterator last, _false_type){
+            //不是pod类型
+            assign_aux(first, last, iterator_category_t<InputIterator>());
+        }
+
+        //下面类外再实现   将first，last区间值  放置到begin之后   
+        template<class InputIterator> // 
+        void assign_aux(InputIterator first, InputIterator last, input_iterator_tag);
+
+        template<class ForwardIterator>//特化迭代器
+        void assign_aux(ForwardIterator first, ForwardIterator last,forward_iterator_tag);
+
+    public://assign----顺次拷贝
+        void assign(size_type n, const value_type &value){
+            fill_assign(n, val);
+        }
+        template<class InputIterator>
+        void assign(InputIterator first, InputIterator last){
+            assign_dispatch(first, last, _is_integer_t<InputIterator>());//是否是pod
+        }
+        void assign(std::initializer_list<value_type> ils){
+            assign(ils.begin(),ils.end());
+        }
+
+        vector & operator=(std::initializer_list<value_type> ils){
+            assign(ils);
+            return *this;
+        }
+    };
+
+//  aux_interface---接口   insert实现
+    template<class T,class Alloc>
+    void vector<T,Alloc>::insert_aux(iterator position, const value_type & value){
+        if(finish != end_of_storage){//仍然有空间
+            construct(finish, *(finish - 1));
+            ++finish;
+        }
     }
 } // namespace MiniSTL
