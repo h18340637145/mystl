@@ -191,7 +191,7 @@ namespace MiniSTL
         //迭代器区间插入
         template<class InputIterator>
         void range_insert(iterator pos, InputIterator first, InputIterator last,
-                        insert_iterator_tag);
+                        input_iterator_tag);
         
         template<class ForwardIterator>
         void range_insert(iterator pos, ForwardIterator first, ForwardIterator last, forward_iterator_tag);
@@ -298,9 +298,9 @@ namespace MiniSTL
         }
     }
 
-    template<class T,class Alloc>
-    template<class InputIterator>
-    void vector<T,Alloc>::range_insert(iterator pos, InputIterator first,
+    template <class T, class Alloc>
+    template <class InputIterator>
+    void vector<T, Alloc>::range_insert(iterator pos, InputIterator first,
                                     InputIterator last, input_iterator_tag){
         for(; first != last; ++first){
             //从pos开始插入一个迭代器区间的元素
@@ -328,9 +328,134 @@ namespace MiniSTL
                     //插入
                     MiniSTL::copy(position, position + n, position);//末尾这个不是first?
                 }else{
-
+                    ForwardIterator mid = first;
+                    advance(mid, elems_after);
+                    MiniSTL::uninitialized_copy(mid, last, finish);
+                    finish += n - elems_after;
+                    MiniSTL::uninitialized_copy(position, old_finish, finish);
+                    finish += elem_after;
+                    MiniSTL::copy(first, mid, position);
                 }
+            }else{
+                //expand 扩容
+                // first == last 
+                const size_type old_size = size();//原来的大小
+                const size_type new_size = old_size + MiniSTL::max(old_size, n);//扩容到可以装进去或者2倍大小
+                iterator new_start = data_allocator::allocate(new_size);//分配新的空间
+                iterator new_finish = new_start;
+                try
+                {
+                    new_finish = MiniSTL::uninitialized_copy(start, position, new_start);//前一半
+                    new_finish = MiniSTL::uninitialized_copy(first, last, new_finish);//插入段
+                    new_finish = MiniSTL::uninitialized_copy(position, finish, new_finish);//后一半
+                }
+                catch(std::exception &)
+                {
+                    destory(new_start, new_finish);//如果失败，将新分配的空间全部销毁
+                    data_allocator::deallocate(new_start, new_size);//重新分配这段空间
+                    throw;  //抛出异常
+                }
+                destory_and_deallocate();
+                start = new_start;
+                finish = new_finish;
+                end_of_storage = new_start + new_size;
             }
         }
     }
+
+    template <class T, class Alloc>
+    inline void vector<T,Alloc>::swap(vector &rhs) noexcept{
+        //交换两个vector
+        MiniSTL::swap(start, rhs.start);//头尾capacity
+        MiniSTL::swap(finish,rhs.finish);
+        MiniSTL::swap(end_of_storage, rhs.end_of_storage);
+    }
+
+    template<class T, class Alloc>
+    inline vector<T,Alloc>::vector(vector &&rhs) noexcept{
+        //右值移动
+        start = rhs.start;
+        finish = rhs.finish;
+        end_of_storage = rhs.end_of_storage;
+        //本质是复制，并将原来的置空  因为是pod类型  只能复制  对象类型可能会使用move
+        rhs.start = rhs.finish = rhs.end_of_storage = nullptr;
+    }
+
+    template<class T, class Alloc>
+    inline vector<T,Alloc>& vector<T,Alloc>::operator=(const vector& rhs){
+        //operator=  复制vector
+        vector temp(rhs);//构造一个rhs相同的对象
+        swap(temp);//将临时的置换给this  赋值  不销毁
+        return *this; //再返回this
+    }
+
+    template<class T,class Alloc>
+    inline vector<T,Alloc> & vector<T,Alloc>::operator=(vector &&rhs) noexcept{
+        //移动对象   将原有的对象移动给当前对象
+        if (this !=rhs)
+        {
+            //不相同是时候才移动
+            destory_and_deallocate();//销毁start，finish   重新分配空间start，end_of_storage-start
+            start = rhs.start;
+            finish = rhs.finish;
+            end_of_storage = rhs.end_of_storage;
+            rhs.end_of_storage = rhs.finish = rhs.start = nullptr;  //移动之后置空
+        }
+        return *this;
+    }
+
+    template<class T,class Alloc>
+    inline void vector<T,Alloc>::resize(size_type new_size, const value_type &value){
+        //重新设置大小
+        if(new_size < size()){
+            erase(begin() + new_size, end());//后面的删除即可  迭代器区间删除
+        }else{
+            //新空间大 在末尾插入  new_size - size 个value
+            fill_insert(end(), new_size - size(), value);
+        }
+    }
+
+    template<class T, class Alloc>
+    inline void vector<T,Alloc>::reserve(size_type new_capacity){
+        //重新规划容量
+        if(new_capacity <= capacity()){
+            //缩小容量
+            return;
+        }
+        T* new_start = data_allocator::allocate(new_capacity);
+        T* new_finish = MiniSTL::uninitialized_copy(start, finish, new_start);
+        destory_and_deallocate();//删除start，finish  重新分配start， end_of_storage - start
+        start = new_start;
+        finish = new_finish;
+        end_of_storage = start + new_capacity;
+    }
+
+    template<class T, class Alloc>
+    bool vector<T, Alloc>::operator==(const vector & rhs)const noexcept{
+        if (size() != rhs.size()) {
+            return false;
+        }else{//长度相同了
+            iterator ptr1 = start;
+            iterator ptr2 = rhs.start;
+            for(;ptr1 != finish && ptr2 != rhs.finish; ++ptr1, ++ptr2){
+                if(*ptr1 == *ptr2){
+                    return false;//有一个值不相同   false
+                }
+            }
+            //长度相同且各元素相同
+            return true;
+        }
+    }
+
+    template<class T, class Alloc>
+    inline void vector<T,Alloc>::push_back(const value_type &value){
+        if(finish != end_of_storage){
+            //容量够用，可以插入
+            construct(finish, value);
+            ++finish;
+        }else{
+            insert_aux(end(), value);//容量不够，aux中会考虑扩容问题
+        }
+    }
+
 } // namespace MiniSTL
