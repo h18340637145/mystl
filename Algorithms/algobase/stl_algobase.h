@@ -58,8 +58,9 @@ namespace MiniSTL
     }
 
     //  直到迭代器指向对象的类型，才能构造对象，因此本初使用了value_type
+    //自行修改为__
     template<class ForwardIterator1,class ForwardIterator2,class T>
-    inline void iter_swap(ForwardIterator1 a,ForwardIterator2 b,T){
+    inline void __iter_swap(ForwardIterator1 a,ForwardIterator2 b,T){
         T temp = *a;
         *a = *b;
         *b = temp;
@@ -99,11 +100,12 @@ namespace MiniSTL
         return comp(b ,a) ? b:a;
     }
 
-    //词典序比较
+    //词典序比较  两组迭代器
     template<class InputIterator1,class InputIterator2,class Compare>
     bool lexicographical_compare(InputIterator1 first1,InputIterator1 last1,
                                 InputIterator2 first2, InputIterator2 last2,
                                 Compare comp){
+                                    //有循环，不要内联
         for(;first1 != last1 && first2!=last2;first1++,first2++){
             if(comp(*first1,*first2)){
                 return true;

@@ -7,6 +7,15 @@
 namespace MiniSTL
 {
     //use sub_allocator as default allocator
+    /*
+        vector类 
+            成员变量：
+                开始，完成，容量尾
+            分配器使用Alloc
+
+
+
+    */
     template <class T,class Alloc = simpleAlloc<T>>
     class vector{
     public:
