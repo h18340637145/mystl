@@ -32,7 +32,7 @@ namespace MiniSTL
         for(;first != last; ++cur, ++first){
             construct(&*cur, *first); //cur指针出构造一个对象，其值为*first
         }                            
-        return cur;//返回头
+        return cur;//返回尾
     }
 
     //针对char* ，wchar_t* 存在特化版本 memmove直接移动内存

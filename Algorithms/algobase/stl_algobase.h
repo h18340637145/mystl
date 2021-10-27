@@ -208,7 +208,7 @@ namespace MiniSTL
 //针对指针偏特化
     inline char * copy(const char * first , const char * last,char * result){
         memmove(result, first, last - first);//将first的内容赋值到result中
-        return result + (last - first);//尾指针
+        return result + (last - first);//尾指针，result 是不变的
     }
 
     inline wchar_t* copy(const wchar_t * first, const wchar_t *last,

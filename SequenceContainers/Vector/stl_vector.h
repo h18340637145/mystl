@@ -261,6 +261,7 @@ namespace MiniSTL
             construct(finish, *(finish - 1));//末尾出构造一个
             ++finish;
             value_type value_copy = value;//stl copy in copy out
+            //整体向后移动一次
             MiniSTL::copy_backward(position, finish - 2, finish - 1);
             //相当于将position后面 后面的元素都向后移动一个单位
             //finish指向最后一个元素后面的那个位置  finish-2  相当于未添加前的finish-1 即末尾元素
@@ -457,5 +458,124 @@ namespace MiniSTL
             insert_aux(end(), value);//容量不够，aux中会考虑扩容问题
         }
     }
+    
+    //返回一个迭代器
+    //删除一个迭代器区间
+    template<class T,class Alloc>
+    inline typename vector<T,Alloc>::iterator vector<T, Alloc>::erase(
+        iterator first, iterator last
+    ){
+        iterator i = MiniSTL::copy(last, finish, first);//覆盖区间，i保存最后元素
+        destory(i, finish);     //删除后面
+        finish -= (last - first);
+        return first;// fist在copy时并不发生变化，指向被删除区间最后一个位置的下一块空间
+        // 返回被删除区间的后面的元素
+    }
+
+    template<class T,class Alloc>
+    void vector<T, Alloc>::fill_insert(iterator position, size_type n, const value_type &value){
+        // 在pos之后插入n个val
+        if (n != 0)//不是插入0个
+        {
+            if(static_cast<size_type>(end_of_storage - finish) >= n){
+                //不需要扩展   空间足够
+                value_type value_copy = value;
+                const size_type elems_after = finish - position;
+                iterator old_finish = finish;
+                if(elems_after > n){
+                    MiniSTL::uninitialized_copy(finish - n, finish, finish);
+                    finish += n;
+                    //把postion处的元素移动到old_finish-n处  目标的末尾的old_finish
+                    MiniSTL::copy_backward(position, old_finish - n, old_finish);
+                    MiniSTL::fill(position, position + n,value_copy);//填充元素
+                }else{
+                    //看不懂
+                    //要插入很多数
+                    MiniSTL::uninitialized_fill_n(finish, n - elems_after, value_copy);//多出来的一定是value_copy值
+                    finish += n - elems_after;
+                    MiniSTL::uninitialized_copy(position, old_finish, finish);//原来元素所在的位置因为插入，相当于整体被移动到最后
+                    finish += elems_after;
+                    MiniSTL::fill(position, old_finish, value_copy);//pos处插入剩下的val
+                }
+            }else{
+                //扩容
+                const size_type old_size = size();
+                const size_type new_size = old_size + MiniSTL::max(old_size, n);
+                iterator new_start = data_allocator::allocate(new_size);
+                iterator new_finish = new_start;
+                try
+                {
+                    new_finish = MiniSTL::uninitialized_copy(start, position, new_start);//返回头指针
+                    new_finish = MiniSTL::uninitialized_fill_n(new_finish, n, value);
+                    new_finish = MiniSTL::uninitialized_copy(position, finish, new_finish);
+                }
+                catch(std::exception&)
+                {
+                    destory(new_start, new_finish);//扩容失败，销毁  重分配大空间 抛异常
+                    data_allocator::deallocate(new_start, new_finish);
+                    throw;
+                }
+                destory_and_deallocate();
+                start = new_start;
+                finish = new_finish;
+                end_of_storage = new_start + new_size;
+            }
+        }
+    }
+    template<class T, class Alloc>//一个参数，调用两个参数的
+    inline typename vector<T,Alloc>::iterator vector<T, Alloc>::insert(
+        iterator position
+    ){
+        return insert(position, value_type());//当前vector存储类型的
+    }
+
+    template<class T, class Alloc>
+    inline typename vector<T, Alloc>::iterator vector<T, Alloc>::insert(
+        iterator position, const value_type &value //const type  只读变量 引用 只读原数据
+    ){
+        size_type n = position - begin();//插入位置
+        //容量足够且插入位置在末尾
+        if (finish != end_of_storage && position == end())
+        {
+            construct(finish, value);
+            ++finish;
+        }else{
+            //普通插入，判断是否扩容，不用扩容的时候，整体向后移动，在pos位置插入即可
+            insert_aux(position, value);
+        }
+        return begin() + n;//插入点保持不变，后续如果再插  还是在这里
+    }
+    
+    //全都使用val来填充
+    template<class T, class Alloc>  // 成员函数不内敛  应该是超过行了
+    void vector<T, Alloc>::fill_assign(size_type n, const value_type &val){
+        if(n > capacity()){
+            //容量不够，扩容
+            vector<T, Alloc> temp(n, val);
+            temp.swap(*this);//又缩回去了？
+        }else if(n > size()){
+            //容量够用，
+            MiniSTL::fill(begin(), end(), val);//直接填充
+            finish = MiniSTL::uninitialized_fill_n(finish, n - size(), val);//后面填充
+        }else{
+            //删除 fill_n返回填充后的末尾  从此处到vector末尾都删除即可
+            erase(MiniSTL::fill_n(begin(), n, val), end());//前面都填充，后面删掉
+        }
+    }
+
+    template<class T, class Alloc>
+    template<class InputIterator>
+    void vector<T, Alloc>::assign_aux(InputIterator first, InputIterator last, input_iterator_tag){
+        iterator cur = begin();
+        for(; first != last && cur != end(); ++cur, ++first){
+            *cur = *first;
+        }
+        if(cur == last){
+            erase(cur, end());
+        }else{
+            insert(end(), first, last);//从end() 开始插入first，end区间的元素
+        }
+    }
+    
 
 } // namespace MiniSTL
