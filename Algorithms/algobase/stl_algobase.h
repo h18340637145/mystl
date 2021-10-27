@@ -140,7 +140,7 @@ namespace MiniSTL
                                                 InputIterator2 first2,
                                                 InputIterator2 last2){
                                                 
-        while(first1 ! last1 && (*first1 == *first2)){
+        while(first1 != last1 && (*first1 == *first2)){
             ++first1;
             ++first2;
         }
