@@ -607,4 +607,54 @@ namespace MiniSTL
         start = allocate_and_copy(rhs.begin(), rhs.end());//返回头
         finish = end_of_storage = start + rhs.size();
     }
+
+    template<class T,class Alloc>
+    inline vector<T, Alloc>::vector(std::initializer_list<T> il){
+        start = allocate_and_copy(il.begin(), il.end());
+        finish = end_of_storage + il.size();
+    }
+
+    // ==
+    // !=
+    // <
+    // >
+    // <=
+    // >=
+    // swap
+    //全局函数
+    template<class T, class Alloc>
+    inline bool operator==(const vector<T> &lhs,
+                            const vector<T> &rhs){
+        return lhs.operator==(rhs);
+    }
+
+    template<class T, class Alloc>
+    inline bool operator!=(const vector<T> &lhs,
+                            const vector<T> &rhs){
+        return !(lhs == rhs);
+    }
+
+    template<class T>
+    inline bool operator<(const vector<T> &lhs, const vector<T> &rhs){
+        return MiniSTL::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
+    }
+    template<class T>
+    inline bool operator>(const vector<T> &lhs, const vector<T> &rhs){
+        return rhs < lhs;
+    }
+
+    template<class T>
+    inline bool operator<=(const vector<T>& lhs, const vector<T> &rhs){
+        return !(lhs > rhs);
+    }
+
+    template<class T>
+    inline bool operator>=(const vector<T>& lhs, const vector<T> &rhs){
+        return rhs <=lhs;
+    }
+
+    template<class T,class Alloc>
+    inline void swap(const vector<T, Alloc> &lhs, const vector<T,Alloc> &rhs){
+        lhs.swap(rhs);
+    }
 } // namespace MiniSTL
