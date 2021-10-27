@@ -58,9 +58,9 @@ namespace MiniSTL
         template<InputIterator>
         iterator allocate_and_copy(InputIterator first, InputIterator last){
             size_type n = MiniSTL::distance(first, last);
-            iterator result = data_allocator::allocate(n);//分配当前块*n空间
-            MiniSTL::uninitialized_copy(first, last, result);
-            return result;//根据底层，依次为迭代器所指类型进行构造，返回头
+            iterator result = data_allocator::allocate(n);//分配当前块*n空间  result此时是头指针
+            MiniSTL::uninitialized_copy(first, last, result);//放置到result中，result并为改变，如果有返回值 则为末尾
+            return result;//根据底层，依次为迭代器所指类型进行构造 返回头
         }
 
         void deallocate() noexcept{
@@ -577,5 +577,34 @@ namespace MiniSTL
         }
     }
     
+    template<class T,class Alloc>
+    template<class ForwardIterator>
+    void vector<T,Alloc>::assign_aux(ForwardIterator first, ForwardIterator last, forward_iterator_tag){
+        size_type len = MiniSTL::distance(first, last);
+        if (len > capacity())
+        {
+            //分配空间
+            iterator temp = allocate_and_copy(first, last);//temp为头处
+            destory_and_deallocate();
+            start = temp;
+            end_of_storage = finish = start + len;
+        }
+        else if(size() >= len){
+            iterator new_finish = MiniSTL::copy(first, last, start);
+            destory(new_finish, finish);
+            finish = new_finish;//first last之外的数据全部删除
+        }else{
 
+            ForwardIterator mid = first;
+            MiniSTL::advance(mid, size());
+            MiniSTL::copy(first, mid ,start);//前一半存在的移动过来
+            finish = MiniSTL::uninitialized_copy(mid, last, finish);//capacity空间非size空间移动过来
+        }
+    }
+    template<class T,class Alloc>
+    inline vector<T,Alloc>::vector(const vector &rhs){
+        //copy ctor
+        start = allocate_and_copy(rhs.begin(), rhs.end());
+        finish = end_of_storage = start + rhs.size();
+    }
 } // namespace MiniSTL
