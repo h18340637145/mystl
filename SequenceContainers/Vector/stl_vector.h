@@ -604,7 +604,7 @@ namespace MiniSTL
     template<class T,class Alloc>
     inline vector<T,Alloc>::vector(const vector &rhs){
         //copy ctor
-        start = allocate_and_copy(rhs.begin(), rhs.end());
+        start = allocate_and_copy(rhs.begin(), rhs.end());//返回头
         finish = end_of_storage = start + rhs.size();
     }
 } // namespace MiniSTL
