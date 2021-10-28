@@ -35,7 +35,7 @@ namespace MiniSTL{
         using has_trival_copy_constrctor = _true_type;//
         using has_trival_assignment_operator = _true_type;//
         using has_trival_default_constructor = _true_type;//
-        using is_POD_type = _true_type;//
+        using is_POD_type = _true_type;//是pod旧数据类型  所以有默认冗余构造（多余）
     };
 
     template<>

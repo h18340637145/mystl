@@ -164,7 +164,7 @@ namespace MiniSTL{
         //因为创建iterator的时候，需要两个参数，tag和value_type，所以tag会被自动获取出来
     }
 
-    //以下为三种迭代适配器
+    //以下为三种迭代适配器 Container<T>::iterator
     //insert  reverse  stream
 //------------------------------------------------------------------------------//
     //insert:back_insert,front_insert, insert
@@ -245,9 +245,15 @@ namespace MiniSTL{
     }
 
 //------------------------------------------------------------------------------//
+
+
 //------------------------------------------------------------------------------//
+/* 
     // insert_iterator 可以在容易的某个迭代器指定的位置插入元素
     // 输出型迭代器  
+    // 迭代器配接器
+*/
+
     template<class Container>
     class insert_iterator{
     protected:
@@ -295,16 +301,35 @@ namespace MiniSTL{
                                 const __reverse_iterator <It> &);
         
     protected:
-        Iterator current;//与之对应的正向迭代器
+        Iterator current;//与之对应的正向迭代器 int * == Iterator
 
     public:
+    //使用萃取器的地方_t 都使用了萃取器，如此，当传递过来iterator时，
+    //比如在vector中使用reverse_iterator  传进的是iterator  如果vector<int>  那么iterator就是int* 
+    //而__reverse_iterator<iterator>就是__iterator<int *>  
+    //即在__reverse_iterator类中的iterator就是int *     __reverse_iterator<int*>
+
+    /*
+        此时开始使用萃取器，以value_type为例  value_type_t<iterator> == value_type_t<int*>
+
+    template<class T>
+    struct iterator_traits<T*>{
+        using value_type = T;
+    };
+        iterator_traits中的T 就是int 
+        因此iterator_traits中的value_type == int
+
+        此时value_type_t<Iterator> 就是int   即  本条语句  using value_type = value_type_t<Iterator>; 
+        value_type就是int
+        所以在vector<int> 的__reverse_iterator 中,迭代器指向的类型是int类型 
+    */
         using iterator_category = iterator_category_t<Iterator>;
-        using value_type = value_type_t<Iterator>;
+        using value_type = value_type_t<Iterator>;//int
         using difference_type = difference_type_t<Iterator>;
         using pointer = pointer_t<Iterator>;
         using reference = reference_t<Iterator>;
 
-        using iterator_type = Iterator;//正向迭代器
+        using iterator_type = Iterator;//正向迭代器  int *
         using self = __reverse_iterator ;//反向迭代器---就是自己
 
     public:

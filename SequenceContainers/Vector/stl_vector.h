@@ -4,8 +4,6 @@
 #include "allocator.h"
 #include "uninitialized.h"
 
-
-
 namespace MiniSTL
 {
     //use sub_allocator as default allocator
@@ -14,8 +12,6 @@ namespace MiniSTL
             成员变量：
                 开始，完成，容量尾
             分配器使用Alloc
-
-
 
     */
     template <class T,class Alloc = simpleAlloc<T>>
@@ -55,9 +51,9 @@ namespace MiniSTL
         }
 
         template<class InputIterator>
-        void initialized_aux(InputIterator first,InputIterator last, _false_type){
+        void initialize_aux(InputIterator first,InputIterator last, _false_type){
             //不是pod类型
-            start = allocate_and_copy(first, last);
+            start = allocate_and_copy(first, last);//分配n块空间，将区间值移动过来
             finish = end_of_storage = start + MiniSTL::distance(first, last);
         }
         iterator allocate_and_fill(size_type n, const value_type &value){
@@ -76,7 +72,7 @@ namespace MiniSTL
 
         void deallocate() noexcept{
             //重分配
-            if (start)
+            if (start) //start != 0
             {
                 data_allocator::deallocate(start ,end_of_storage - start);
                 //重新分配全部空间
@@ -84,13 +80,13 @@ namespace MiniSTL
         }
         void destory_and_deallocate() noexcept{
             destory(start, finish);//pod类型无所谓   非pod类型  依次调用destory
-            deallocate();
+            deallocate();//capacity
         }
 
 
     public:
         //swap  成员函数
-        void swap(vector& ) noexcept;
+        void swap(vector& ) noexcept;//交换三个值
 
     public:
         //ctor  dtor
@@ -107,12 +103,11 @@ namespace MiniSTL
         }
         vector(std::initializer_list<T>);
         vector(const vector &);
-        vector(vector &&)noexcept ; //右值移动
+        vector(vector &&)noexcept ; //右值移动  赋值之后，原来的置空
         ~vector(){
             destory(start, finish);
-            deallocate();//重新分配全部空间
+            deallocate();//重新分配全部空间 capacity
         }
-
 
     public://copy assignment operator=
         vector& operator=(const vector& );
@@ -197,7 +192,7 @@ namespace MiniSTL
         }
     private:
         //aux_interface for insert
-        void insert_aux(iterator , const value_type&);//插入一个
+        void insert_aux(iterator , const value_type&);//插入一个 考虑扩容问题
         void fill_insert(iterator, size_type, const value_type &);//插入n个value
         //迭代器区间插入
         template<class InputIterator>
@@ -212,7 +207,7 @@ namespace MiniSTL
             fill_insert(pos, static_cast<int>(n), value_type(value));
         }
         
-        template<class InputIterator>//迭代器处   出入一个区间的值  正向迭代器 基类对象接受
+        template<class InputIterator>//迭代器处   插入一个区间的值  正向迭代器 基类对象接受
         void insert_dispatch(iterator pos, InputIterator first, InputIterator last, _false_type){
             range_insert(pos, first, last, iterator_category_t<InputIterator>());
         }
@@ -303,7 +298,7 @@ namespace MiniSTL
                 throw; 
             }
 
-            destory_and_deallocate();  //销毁start ， finish(原空间)  重新分配newstart，endof-start
+            destory_and_deallocate();  //销毁start ， finish(原空间)  重新分配newstart，end of-start
             start = new_start;
             finish = new_finish;
             end_of_storage = new_start + new_size;
@@ -338,7 +333,7 @@ namespace MiniSTL
                     // 末尾移动至 oldfinish处
                     MiniSTL::copy_backward(position, old_finish - n, old_finish);
                     //插入
-                    MiniSTL::copy(position, position + n, position);//末尾这个不是first?
+                    MiniSTL::copy(position, position + n, position);//first,first+n/last,position?
                 }else{
                     ForwardIterator mid = first;
                     advance(mid, elems_after);
@@ -407,13 +402,14 @@ namespace MiniSTL
         if (this !=rhs)
         {
             //不相同是时候才移动
-            destory_and_deallocate();//销毁start，finish   重新分配空间start，end_of_storage-start
-            start = rhs.start;
+            destory_and_deallocate();//销毁this 对象的start，finish   重新分配空间start，end_of_storage-start
+            //相当于置空处理
+            this->start = rhs.start;
             finish = rhs.finish;
             end_of_storage = rhs.end_of_storage;
             rhs.end_of_storage = rhs.finish = rhs.start = nullptr;  //移动之后置空
         }
-        return *this;
+        return *this;//把别人的值抢过来的this对象
     }
 
     template<class T,class Alloc>
@@ -436,7 +432,7 @@ namespace MiniSTL
         }
         T* new_start = data_allocator::allocate(new_capacity);
         T* new_finish = MiniSTL::uninitialized_copy(start, finish, new_start);
-        destory_and_deallocate();//删除start，finish  重新分配start， end_of_storage - start
+        destory_and_deallocate();//删除当前this 的 start，finish  重新分配start， end_of_storage - start
         start = new_start;
         finish = new_finish;
         end_of_storage = start + new_capacity;
@@ -466,7 +462,7 @@ namespace MiniSTL
             construct(finish, value);
             ++finish;
         }else{
-            insert_aux(end(), value);//容量不够，aux中会考虑扩容问题
+            insert_aux(end(), value);//容量不够，aux中会考虑扩容问题，在end()处插入一个val
         }
     }
     
@@ -500,7 +496,6 @@ namespace MiniSTL
                     MiniSTL::copy_backward(position, old_finish - n, old_finish);
                     MiniSTL::fill(position, position + n,value_copy);//填充元素
                 }else{
-                    //看不懂
                     //要插入很多数
                     MiniSTL::uninitialized_fill_n(finish, n - elems_after, value_copy);//多出来的一定是value_copy值
                     finish += n - elems_after;
@@ -526,7 +521,7 @@ namespace MiniSTL
                     data_allocator::deallocate(new_start, new_finish);
                     throw;
                 }
-                destory_and_deallocate();
+                destory_and_deallocate();//删除原来的空间，使用新空间替换
                 start = new_start;
                 finish = new_finish;
                 end_of_storage = new_start + new_size;
@@ -563,7 +558,7 @@ namespace MiniSTL
         if(n > capacity()){
             //容量不够，扩容
             vector<T, Alloc> temp(n, val);
-            temp.swap(*this);//又缩回去了？
+            temp.swap(*this);//又缩回去了？  swap(temp)?
         }else if(n > size()){
             //容量够用，
             MiniSTL::fill(begin(), end(), val);//直接填充
