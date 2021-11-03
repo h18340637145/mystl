@@ -504,7 +504,114 @@ namespace MiniSTL
         //本质上就是一个元素  i指向的那个
         // 移动到position位置之前
     }
-   
-
     
+    template<class T, class Alloc>
+    void list<T, Alloc>::merge(list &x){
+        iterator first1 = begin();
+        iterator last1 = end();
+        iterator first2 = x.begin();
+        iterator last2 = x.end();
+
+        while(first1 != last1 && first2 != last2){
+            if(*first2 < *first1){
+                iterator next = first2;
+                transfer(first1, first2, ++next);//2 < 1    2 1   增序
+                first2 = next;
+            }else{
+                ++first1;
+            }
+            if (first2 != last2 )
+            {
+                transfer(last1, first2, last2);
+            }
+        }
+    }
+
+    template<class T, class Alloc>
+    void list<T, Alloc>::reverse(){
+        //empty  || size() == 1
+        if (node->next == node || node->next->next == node){
+            return ;
+        }
+        iterator first = begin();
+        ++first;//begin 自身并不需要移动，他作为指示末尾元素的哨兵，
+        //（确切的说，最终的begin.node->next == end.node)
+        while (first != end()){
+            iterator old = first;
+            ++first;
+            transfer(begin(), old, first);//123    21     321  
+        }
+    }
+
+    template<class T, class Alloc>
+    void list<T, Alloc>::sort(){
+        if (node->next == node || node->next->next == node)
+        {
+            return ;
+        }
+        //数据缓冲区
+        //counter[n]中最多存放2^(n+1)个元素，若大于则与counter[n+1]做归并
+        list carry;
+        list counter[64];
+        int fill = 0;
+        while (!empty())
+        {
+            carry.splice(carry.begin(),*this, begin());
+            int i = 0;
+            while (i < fill && !counter[i].empty())
+            {
+                counter[i].merge(carry);
+                carry.swap(counter[i++]);
+            }
+            carry.swap(counter[i]);
+            if (i == fill)
+            {
+                ++fill; 
+            }
+        }
+        for (int i = 1; i < fill; i++)
+        {
+            counter[i].merge(counter[i-1]);
+        }
+        swap(counter[fill - 1]);
+    }
+
+    template<class T>
+    inline void swap(list<T>& lhs, list<T> &rhs){
+        lhs.swap(rhs);
+    }
+
+    template<class T>
+    bool operator==(const list<T> &lhs, const list<T> &rhs){
+        auto it1 = lhs.begin();
+        auto it2 = rhs.begin();
+
+        for(; it1 != lhs.end() && it2 != rhs.end(); ++it1, ++it2){
+            if (* it1 != *it2)
+            {
+                return false;
+            }
+        }
+        return it1 == lhs.end() && it2 == rhs.end();
+    }
+
+    template<class T>
+    inline bool operator!=(const list<T> &lhs, const list<T> &rhs){
+        return !(lhs == rhs);
+    }
+
+    template<class T>
+    inline bool operator<(const list<T> &lhs, const list<T> &rhs){
+        return MiniSTL::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
+    }
+
+    template<class T>
+    inline bool operator>(const list<T>& lhs, const list<T> &rhs){
+        return !(rhs < lhs);
+    }
+
+    template<class T>
+    inline bool operator>=(const list<T> &lhs, const list<T> &rhs){
+        return !(lhs < rhs);
+    }
 } // namespace MiniSTL
