@@ -506,9 +506,5 @@ namespace MiniSTL
     }
    
 
-
-
-    
-
     
 } // namespace MiniSTL
