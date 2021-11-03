@@ -263,15 +263,15 @@ namespace MiniSTL
         }
     }
     void* __default_alloc::allocate(size_t n){
-        obj * volatile * my_free_list;
+        obj * volatile * my_free_list;//每次从内存取数据，抗拒优化
         obj * result;
         //如果n大于128 则采用一级适配器
         if (n > __MAX_BYTES){
             return (malloc_alloc::allocate(n));
         }
         //选择采用第几区块
-        my_free_list = free_list + FREELIST_INDEX(n);
-        result = *my_free_list;
+        my_free_list = free_list + FREELIST_INDEX(n);//头地址+区块所在地址
+        result = *my_free_list;//记录头
         if(result == nullptr){
             //未找到可用free_list  准备填充free_list
             void * r = refill(ROUND_UP(n));
@@ -279,7 +279,7 @@ namespace MiniSTL
         }
         //调整freelist
         *my_free_list = result->free_list_link;//指向这一块的链表区
-        return result;
+        return result;//返回头
     }
 
     void __default_alloc::deallocate(void* p,size_t n){

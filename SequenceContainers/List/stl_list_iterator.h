@@ -69,9 +69,126 @@ namespace MiniSTL
             --(*this);
             return temp;
         }
-
-
-
     };
+
+    template<class T>
+    struct __list_const_iterator{
+        //alias declaration
+        using iterator = __list_iterator<T>;
+        using self = __list_const_iterator<T>;
+        using link_type = __list_node<T>*;//同样是指向节点类型的指针
+
+        using iterator_category = bidirectional_iterator_tag;
+        using value_type = T;
+        using pointer = const T*;
+        using reference = const T&;
+        using difference_type = ptrdiff_t;
+
+
+        //data member   __list_node<T>*
+        link_type node;
+
+        //ctor
+        __list_const_iterator(){}
+        explicit __list_const_iterator(link_type x) : node(x){}
+        __list_const_iterator(const iterator &x) : node(x.node){}
+
+        //dtor(trival)
+        bool operator==(const self &rhs)const noexcept{
+            return node == rhs.node;
+        }
+
+        bool operator!=(const self &rhs) const noexcept{
+            return node != rhs.node;
+        }
+
+        reference operator*() const{
+            return node->data;
+        }
+        pointer operator->() const{
+            return &(operator*());
+        }
+
+        //++后置
+        self& operator++(){
+            node = node->next;
+            return *this;
+        }
+
+        self operator++(int){
+            self temp = *this;
+            ++(*this);
+            return temp;
+        }
+        //--后置
+        self& operator--(){
+            node = node->prev;
+            return *this;
+        }
+        self operator--(int){
+            self temp = *this;
+            --(*this);
+            return temp;
+        }
+    };
+    
+
+    // template <class T>
+    // struct __list_iterator  
+    // {
+    //     //alias 重命名
+    //     using value_type = T;
+    //     using pointer = T*;
+    //     using reference = T&;
+    //     using difference_type = ptrdiff_t;
+
+    //     using self = __list_iterator<T>;
+    //     using iterator_category = bidirectional_iterator_tag;
+    //     using link_type = __list_node<T>*;
+
+    //     link_type node;//底层
+
+    //     __list_iterator(){}
+    //     explicit __list_iterator(link_type x) : node(x){}
+
+
+    //     bool operator==(const self &rhs) const noexcept{
+    //         return node == rhs.node;
+    //     }
+
+    //     bool operator!=(const self& rhs) const noexcept{
+    //         return node != rhs.node;
+    //     }
+
+    //     bool operator*() const{
+    //         return node->data;
+    //     }
+
+    //     bool operator->()const{
+    //         return &(operator*());
+    //     }
+
+    //     self& operator++(){
+    //         node = node->next;
+    //         return *this;
+    //     }
+
+    //     self operator++(int){
+    //         self temp = *this;
+    //         ++(*this);
+    //         return temp;
+    //     }
+
+    //     self& operator--(){
+    //         node = node->prev;
+    //         return *this;
+    //     }
+
+    //     self operator--(int){
+    //         self temp = *this;
+    //         --(*this);
+    //         return temp;
+    //     }
+    // };
     
 } // namespace MiniSTL

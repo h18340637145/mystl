@@ -33,7 +33,8 @@ namespace MiniSTL{
     template<class T,class Alloc>
     //无参分配  本质是分配一块大小为当前类型的空间
     T* simpleAlloc<T,Alloc>::allocate(){
-        return reinterpret_cast<T*>(Alloc::allcate(sizeof(T)));
+        return reinterpret_cast<T*>(Alloc::allocate(sizeof(T)));
+        //二级分配器中分配一块T大小的空间
     }
     
     template<class T,class Alloc>
