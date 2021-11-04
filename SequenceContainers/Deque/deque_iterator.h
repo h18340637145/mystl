@@ -49,6 +49,7 @@ namespace MiniSTL
             : cur(rhs.cur), first(rhs.first), last(rhs.last), node(rhs.node){}
 
     //建立管控中心的节点
+    /* 使 node 跳跃到新的缓冲区 new_node */
         void set_node(map_pointer new_node){
             node = new_node;
             first = *new_node;
@@ -95,12 +96,154 @@ namespace MiniSTL
         }
 
         //random access iterator   += 不只是1  可以是任意的数
-        self &operator+=(difference_type n){
-            difference_type offset = n + (cur - first);
-            
+        self &operator+=(difference_type n){//可加可减
+            difference_type offset = n + (cur - first);  //偏移first多少  相当于index
+            if(offset >= 0 
+                && offset < static_cast<difference_type>(buffer_size())){ //在当前节点之内  
+                //不需要跳转
+                cur += n;
+            }else{
+                //offset 小于0 则必然需要跳转
+                difference_type node_offset 
+                = offset > 0 
+                ? offset / static_cast<difference_type>(buffer_size())
+                : -static_cast<difference_type>((-offset - 1) / buffer_size()) - 1;
+
+                set_node(node + node_offset);
+                cur = first + (offset - node_offset * static_cast<difference_type>(buffer_size()));
+            }
+            return *this;
         }
 
+        self operator+(difference_type n){
+            self temp = *this;
+            return temp += n;
+        }
 
+        self& operator-=(difference_type n){
+            return *this += -n;
+        }
+
+        self operator-(difference_type n){
+            self temp = *this;
+            return temp -= n;
+        }
+
+        reference operator[](difference_type n){
+            return *(*this + n);
+        }
     };
+
+    template<class T, class Ref, class Ptr>
+    inline bool operator==(const __deque_iterator<T, Ref, Ptr> &lhs,
+                            const __deque_iterator<T, Ref, Ptr> &rhs){
+        return lhs.cur == rhs.cur;
+    }
     
+    //compare with const
+    template<class T, class RefL, class PtrL,class RefR, class PtrR>
+    inline bool operator==(const __deque_iterator<T, RefL,PtrL> &lhs,
+                            const __deque_iterator<T, RefR, PtrR> &rhs){
+        return lhs.cur == rhs.cur;
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline bool operator!=(const __deque_iterator<T, Ref, Ptr> &lhs,
+                            const __deque_iterator<T, Ref, Ptr> &rhs){
+        return !(lhs == rhs);
+    }
+
+    template<class T, class RefL, class PtrL, class RefR, class PtrR>
+    inline bool operator!=(const __deque_iterator<T, RefL,PtrL> &lhs,
+                            const __deque_iterator<T, RefR, PtrR> &rhs){
+        return !(lhs == rhs);
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline bool operator<(const __deque_iterator<T, Ref, Ptr> &lhs,
+                            const __deque_iterator<T, Ref, Ptr> &rhs){
+        //同一个节点， 当前小的即可
+        //不同节点的话，就是节点小的
+        return (lhs.node == rhs.node) ? (lhs.cur < rhs.cur) : (lhs.node < rhs.node);
+    }
+
+    template<class T, class RefL, class PtrL, class RefR, class PtrR>
+    inline bool operator<(const __deque_iterator<T, RefL, PtrL> &lhs,
+                            const __deque_iterator<T, RefR, PtrR> &rhs){
+        return (lhs.node == rhs.node) ? (lhs.cur < rhs.cur) : (lhs.node < rhs.node);
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline bool operator>(const __deque_iterator<T, Ref, Ptr> &lhs,
+                            const __deque_iterator<T, Ref, Ptr> &rhs){
+        return rhs < lhs;
+    }
+
+    template<class T, class RefL, class PtrL, class RefR, class PtrR>
+    inline bool operator>(const __deque_iterator<T, RefL, PtrL> &lhs,
+                            const __deque_iterator<T, RefR, PtrR> &rhs){
+        return rhs < lhs;
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline bool operator<=(const __deque_iterator<T, Ref, Ptr> &lhs,
+                            const __deque_iterator<T, Ref, Ptr> &rhs){
+        return !(lhs > rhs);
+    }
+
+    template<class T, class RefL, class PtrL, class RefR, class PtrR>
+    inline bool operator<=(const __deque_iterator<T, RefL, PtrL> &lhs,
+                            const __deque_iterator<T, RefR, PtrR> &rhs){
+        return !(lhs > rhs);
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline bool operator>=(const __deque_iterator<T, Ref, Ptr> &lhs,
+                            const __deque_iterator<T, Ref, Ptr> &rhs){
+        return !(lhs < rhs);
+    }
+
+    template<class T, class RefL, class PtrL, class RefR, class PtrR>
+    inline bool operator>=(const __deque_iterator<T, RefL, PtrR> &lhs,
+                            const __deque_iterator<T, RefR, PtrR> &rhs){
+        return !(lhs < rhs);
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline typename __deque_iterator<T, Ref, Ptr>::difference_type operator-(
+        const __deque_iterator<T, Ref, Ptr> &lhs,
+        const __deque_iterator<T, Ref, Ptr> &rhs
+    ){// lhs - rhs  
+        return typename __deque_iterator<T, Ref, Ptr>::difference_type(
+            __deque_iterator<T, Ref, Ptr>::buffer_size() * (lhs.node - rhs.node - 1)
+            + (lhs.cur - lhs.first) + (rhs.last - rhs.cur)
+
+       //        =======c*******l  rhs    ------------     lhs   f*******c======   
+       // ---- 的bufsize  + 两个** 的和
+        );
+    }
+//
+// lhs - rhs    
+//
+///* 重载 - 运算符，用于计算两个迭代器之间的距离 */
+/* 注意：两个迭代器的 this 指针均不发生改变 */
+
+    template<class T, class RefL, class PtrL, class RefR, class PtrR>
+    inline typename __deque_iterator<T, RefL, PtrL>::difference_type operator-(
+        const __deque_iterator<T, RefL, PtrL> &lhs,
+        const __deque_iterator<T, RefR, PtrR> &rhs
+    ){
+        return typename __deque_iterator<T, RefL, PtrL>::difference_type(
+            __deque_iterator<T, RefL, PtrL>::buffer_size() * (lhs.node - rhs.node -1)  //两个迭代器之间除头尾以外的缓冲区（他们是绝对饱和的）
+            + (lhs.cur - lhs.first)     //左操作迭代器所指缓冲区内元素个数（该缓冲区可能未饱和）
+            + (rhs.last - rhs.cur)      //右操作迭代器所指缓冲区内元素个数（该缓冲区可能未饱和）
+        );
+    }
+
+    template<class T, class Ref, class Ptr>
+    inline __deque_iterator<T, Ref, Ptr> operator+(
+        ptrdiff_t n, const __deque_iterator<T, Ref, Ptr> &x
+    ){
+        return x + n;
+    }
 } // namespace MiniSTL
