@@ -507,4 +507,104 @@ namespace MiniSTL
         return start - static_cast<difference_type>(n);//start节点向前移动n个位置
         //deque_iterator  110行
     }
+    template<class T, class Alloc>
+    inline typename deque<T,Alloc>::iterator 
+    deque<T ,Alloc>::reserve_elements_at_back(size_type n){
+        //在末尾储备元素
+        size_type vacancies = finish.last - finish.cur -1 ; //最后一个映射区间剩余的元素个数
+        if (n > vacancies)//如果需要储备的元素，比剩下空的个数多  再分配n-vacancise个空间，在后面
+        {
+            new_elements_at_back(n - vacancies);
+        }
+        return finish + static_cast<difference_type>(n);
+    }
+
+    template<class T, class Alloc>
+    void deque<T, Alloc>::new_elements_at_front(size_type new_elems){
+        size_type new_nodes = (new_elems + buffer_size() - 1) / buffer_size();//新增管理节点的个数
+        reserve_elements_at_front(new_nodes);
+        size_type i;
+        try
+        {
+            for(i = 1; i <= new_nodes; i++){
+                *(start.node - i) = allocate_node();    
+            }
+        }
+        catch(const std::exception& e)
+        {
+            for (size_type j = 0; j < i; j++)
+            {
+                deallocate_node(*(start.node - j));
+                throw;
+            }
+        }
+    }
+
+    template<class T, class Alloc>
+    void deque<T, Alloc>::new_elements_at_back(size_type new_elems){
+        size_type new_nodes = (new_elems + buffer_size() -1 ) / buffer_size();
+        reserve_map_at_back(new_nodes);
+        size_type i;
+        try
+        {
+            for(i = 1; i <= new_nodes; i++){
+                *(first.node + i) = allocate_node();
+            }
+        }
+        catch(const std::exception& e)
+        {
+            for(size_type j = 0 ; j < i;j++){
+                deallocate_node(*(finish.node + j));
+            }
+            throw ;
+        }
+    }
+
+    template<class T, class Alloc>
+    inline void deque<T, Alloc>::push_back_aux(const value_type & value){
+        value_type value_copy = value;
+        reserve_map_at_back();//若符合条件 则重新更换map
+        *(finish.node + 1) = allocate_node();//配置新节点
+        try
+        {
+            construct(finish.cur, value_copy);
+            finish.set_node(finish.node + 1);
+            finish.cur = finish.first;//更新finish.cur 为当前first  向后移动一次
+        }
+        catch(const std::exception& e)
+        {
+            deallocate_node(*(finish.node + 1));
+            throw;
+        }
+    }
+
+    template<class T, class Alloc>
+    inline void deque<T, Alloc>::push_front_aux(const value_type& value){
+        value_type value_copy = value;
+        reserve_map_at_front(); //若符合条件则重新更换map
+        *(start.node - 1) = allocate_node();//配置新节点
+        try
+        {
+            start.set_node(start.node -1 );//开始节点前移
+            start.cur = start.last -1 ;
+            construct(start.cur , value);
+        }
+        catch(const std::exception& e)
+        {
+            ++start;
+            deallocate_node(*(start.node-1));
+            throw;
+        }
+    }
+    //node表示管理节点本身   first指向其缓冲区的起始处，last指向缓冲区的末尾处
+    //cur指向缓冲区当前元素的位置
+    template<class T, class Alloc>
+    inline void deque<T, Alloc>::pop_back_aux(){
+        node_allocator::deallocate(finish.first);//释放最后一个管理区的开头
+        finish.set_node(finish.node - 1);//最后一个管理节点向前移动
+        finish.cur = finish.last - 1;//最后一个管理节点的最后一个位置变成当前位置
+        destory(finish.cur);
+    }
+
+
 } // namespace MiniSTL
