@@ -86,7 +86,7 @@ namespace MiniSTL
         template<class InputIterator>
         void range_initialize(InputIterator first, InputIterator last, input_iterator_tag);
 
-        template<class InputIterator>
+        template<class ForwardIterator>
         void range_initialize(ForwardIterator first, ForwardIterator last, forward_iterator_tag);
 
     public:
@@ -605,6 +605,369 @@ namespace MiniSTL
         finish.cur = finish.last - 1;//最后一个管理节点的最后一个位置变成当前位置
         destory(finish.cur);
     }
+
+    template<class T, class Alloc>
+    inline void deque<T, Alloc>::pop_front_aux(){
+        destory(start.cur);
+        node_allocator::deallocate(start.first);
+        start.set_node(start.node +  1);//ministl中使用的finish.node+1 本人自行修改为start.node+1
+        start.cur = start.first;
+    }
+
+    template<class T, class Alloc>
+    typename deque<T, Alloc>::iterator deque<T, Alloc>::insert_aux(
+        iterator pos, const value_type & val
+    ){
+        //pos位置插入val
+        difference_type index = pos - start;// 插入点之前元素的个数
+        value_type value_copy = val;
+        if(static_cast<size_type>(index) < size() / 2){//前移，此时前移的代价小
+            //插图见书
+            push_front(front());//最前端加入哨兵以作为标志，注意此时start发生了改变
+            iterator front1 = start;
+            ++front1;
+            iterator front2 = front1;
+            ++front2;
+            pos = start + index;
+            iterator pos1 = pos;
+            ++pos1;
+            MiniSTL::copy(front2 , pos1 , front1);//移动元素
+        }else{
+            //过程上述类似
+            push_back(back());
+            iterator back1 = finish;
+            --back1;
+            iterator back2 = back1;
+            --back2;
+            iterator pos  = start + index ;//pos
+            MiniSTL::copy_backward(pos, back2 , back1);
+        }
+        *pos = value_copy;
+        return pos;
+    }
+
+    template<class T, class Alloc>
+    void deque<T, Alloc>::fill_insert(iterator pos , size_type n, const value_type & val){
+        //在pos处  插入n 个val的元素
+        if(pos.cur == start.cur){
+            iterator new_start = reserve_map_at_front(n);
+            try
+            {
+                MiniSTL::uninitialized_fill(new_start, start, val);
+                start = new_start;
+            }   
+            catch(const std::exception& e)
+            {
+                destory_nodes(new_start.node, start.node);  
+            }
+        }else if(pos.cur == finish.cur){
+            //最后插
+            iterator new_finish = reserve_map_at_back(n);
+            try
+            {
+                MiniSTL::uninitialized_fill(finish, new_finish, val);
+                finish = new_finish;
+            }
+            catch(const std::exception& e)
+            {
+                destory_nodes(finish + 1, new_finish.node + 1);
+            }
+        }else{
+            insert_aux(pos, n , val);
+        }
+    }
+
+
+//插入接口
+    template<class T, class Alloc>
+    void deque<T, Alloc>::insert_aux(iterator pos, size_type n, const value_type & val){
+        //在pos处插入n个val  不是头尾
+        const difference_type elems_before = pos - start;//插入点之前的元素个数
+        size_type length = size();//deque的大小
+        value_type value_copy = val;
+        if(elems_before  < static_cast<difference_type>(length / 2)){
+            //在前面插入
+            iterator new_start = reserve_elements_at_front(n);//分配n个空间
+            iterator old_start = start;
+            pos = start + elems_before;//pos
+            try
+            {
+                if(elems_before >= static_cast<difference_type>(n)){//**** --
+                //插入元素的个数小于插入点之前的个数，说明在前面添加 的n个空间，放不下从start-pos这么多元素
+                //现将n个元素移动到nstart
+                    iterator start_n =  start + static_cast<difference_type>(n);
+                    MiniSTL::uninitialized_copy(start , start_n, new_start);
+                    start =  new_start;
+                    MiniSTL::copy(start_n, pos, old_start);//在将剩下的几个元素移动到oldstart开始的地方，
+                    //剩下的空间就是要插入的n个位置，使用fill进行填充即可
+                    MiniSTL::fill(pos -  static_cast<difference_type>(n), pos, value_copy);
+                }else {
+                    //插入元素的个数多于插入点之前的个数
+                    //添加了很多空间，现将pos之前的元素全部移动到new_start处
+                    //后面的全部使用val填充即可
+                    MiniSTL::uninitialized_copy_fill(start, pos, new_start, start, value_copy);
+                    start = new_start;
+                    MiniSTL::fill(old_start, pos, val);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                destory_nodes(new_start.node, start.node);
+                throw;                
+            }
+        }else{
+            //在后面插入
+            iterator new_finish = reserve_elements_at_back(n);
+            iterator old_finish = finish;
+            const difference_type elems_after = static_cast<difference_type>(length) - elems_before;
+
+            pos = finish - elems_after;
+            try{
+                if(elems_after >= static_cast<difference_type>(n)){
+                    iterator finish_n = finish - static_cast<difference_type>(n);
+                    MiniSTL::uninitialized_copy(finish_n,finish, finish);
+                    finish= new_finish;
+                    MiniSTL::copy_backward(pos, finish_n, old_finish);
+                    MiniSTL::fill(pos, pos +static_cast<difference_type>(n), value_copy);
+
+                }else{
+                    MiniSTL::uninitialized_fill_copy(finish, pos + static_cast<difference_type>(n) , value_copy, pos, finish);
+                    finish = new_finish;
+                    MiniSTL::fill(pos, old_finish, value_copy);
+                }
+            }catch(std::exception   &){
+                destory_nodes(finish.node + 1 , new_finish.node+1);
+                throw;
+            }
+        }
+    }
+
+
+    template<class T, class Alloc>
+    template<class ForwardIterator>
+    void deque<T, Alloc>::insert_aux(iterator pos, ForwardIterator first, ForwardIterator last, size_type n){
+        //插入一个迭代器区间的元素
+        const difference_type elems_before = pos - start;
+        size_type length = size();
+        if(elems_before < static_cast<difference_type>(n)){
+            //insert front
+            iterator new_start = reserve_elements_at_front(n);
+            iterator old_start = start;
+            pos = start + elems_before;
+            try {
+                if(elems_before >= static_cast<difference_type>(n) ){
+                    //插入的元素个数小于pos之前的元素个数
+                    //先移动一部分，再移动一部分到oldstart
+                    iterator start_n = start + static_cast<difference_type>(n);
+                    MiniSTL::uninitialized_copy(start, start_n, new_start);
+                    start = new_start;
+                    MiniSTL::copy(start_n, pos, old_start);
+                    MiniSTL::copy(first , last, pos - static_cast<difference_type>(n));
+                }else{
+                    ForwardIterator mid = first ;
+                    MiniSTL::advance(mid, static_cast<difference_type>(n) - elems_before);
+                    MiniSTL::uninitialized_copy_copy(start, pos, first, mid, new_start);
+                    start = new_start;
+                    MiniSTL::copy(mid, last, old_start);
+                }
+            }
+            catch(std::exception &){
+                destory_nodes(new_start.node, start.node);
+                throw;
+            }
+        }else{
+            //insert back
+            iterator new_finish = reserve_elements_at_back(n);
+            iterator old_finish = finish;
+            const difference_type elems_after = static_cast<difference_type>(length) - elems_before;
+            pos = finish - elems_after;
+            try{
+                if(elems_after >= static_cast<difference_type>(n)){
+                    //插入位置后面 元素的个数要比插入元素个数的要多
+                    iterator finish_n = finish - static_cast<difference_type>(n);
+                    MiniSTL::uninitialized_copy(finish_n, finish, finish);
+                    finish = new_finish;
+                    MiniSTL::copy_backward(pos, finish_n, old_finish);
+                    MiniSTL::copy(first, last, pos);//填入要插入的值
+                }
+                else{
+                    //要插入的元素很多
+                    ForwardIterator mid = first ;
+                    MiniSTL::advance(mid , elems_after);
+                    MiniSTL::uninitialized_copy_copy(mid,last,pos,finish,finish);
+                    finish = new_finsh;
+                    MiniSTL::copy(first , mid, pos);
+                }
+            }catch(std::exception &){
+                destory_nodes(finish.node+1, new_finish.node+1);
+                throw;
+            }
+        }
+    }
+
+    template<class T, class Alloc>
+    template<class InputIterator>
+    void deque<T, Alloc>::range_insert_aux(iterator pos, InputIterator first, InputIterator last,input_iterator_tag){
+        MiniSTL::copy(first, last, inserter(*this, pos));//在当前容器的pos位置
+        //放入到inserter中pos之后？        返回一个insert_iterator
+    }
+
+    template<class T, class Alloc>
+    template<class ForwardIterator>
+    void deque<T, Alloc>::range_insert_aux(iterator pos, ForwardIterator first, ForwardIterator last, forward_iterator_tag){
+
+        size_type n = MiniSTL::distance(first, last);
+        for(pos.cur == start.cur){
+            iterator new_start = reserve_elements_at_front(n);
+            try{
+                MiniSTL::uninitialized_copy(first, last, new_start);
+                start = new_start;
+            }
+            catch(std::exception &){
+                destory_nodes(new_start.node, start.node);
+                throw;
+            }
+
+        }else if(pos.cur == finish.cur  ){
+            iterator new_finish = reserve_elements_at_back(n);
+            try{
+                MiniSTL::uninitialized_copy(first, last, finish);
+                finish = new_finish;
+            }catch(std::exception &){
+                destory_nodes(finish.node + 1, new_finish.node+1);
+                throw;
+            }
+        }else{
+            insert_aux(pos, first, last, n);
+        }
+    }
+
+
+    template<class T, class Alloc>
+    inline deque<T, Alloc>::deque(deque &&rhs){
+        initialize_map(0);
+        if(rhs.map){//!=nullptr
+            swap(rhs);
+        }
+    }
+
+    template<class T, class Alloc>
+    deque<T, Alloc> &deque<T, Alloc>::operator=(deque &&rhs) noexcept{
+        clear();
+        swap(rhs);//右值移动
+        return *this;
+    }
+
+    template<class T, class Alloc>
+    inline deque<T, Alloc>::~deque(){
+        destory(start,finish);
+        if(map)// !-nullptr
+        {
+            destory_nodes(start.node, finish.node+1);
+            deallocate_map(map, map_size);
+        }
+    }
+
+    template<class T, class Alloc>
+    inline void deque<T,Alloc>::push_back(const value_type & value){
+        //finish  的cur指向最后一个元素的下一个位置，因此if语句表征最少还有一个备用空间
+        if(finish.cur != finish.last - 1){
+            construct(finish.cur, value);
+            ++finish.cur;
+        }
+        else
+        {
+            //最终缓冲区已无或仅剩一个空间
+            push_back_aux(value);
+        }
+    }
+
+    template<class T, class Alloc>
+    inline void deque<T,Alloc>::pop_front(){
+        if(start.cur != start.last - 1){
+            destory(start.cur);
+            ++start.cur;
+        }else{
+            pop_front_aux();
+        }
+    }
+    template<class T, class Alloc>
+    inline void deque<T,Alloc>::pop_back(){
+        if(finish.cur != finish.first){
+            destory(finish.cur);
+            finish.cur--;
+        }else{
+            pop_back_aux();
+        }
+    }
+    template<class T, class Alloc>
+    inline void deque<T, Alloc>::clear(){
+        //清空所有的node ，保留唯一缓冲区
+        for(map_pointer node = start.node +1 ; node < finsih.node; node++){
+            //对于每个缓冲区，就进行清空destory操作
+            destory(*node, *node+buffer_size());//析构所有元素
+            node_allocator::deallocate(*node, buffer_size());
+        }
+        if(start.node != finish.node){
+            //存在头尾两个缓冲区
+            //析构其中所有元素
+            destory(start.cur, start.last);
+            destory(finish.first, finish.cur);
+            //保存头部(后续直接在头部缓冲区中加元素)，释放尾部
+            node_allocator::deallocate(finish.first, buffer_size());
+        }else{
+            destory(start.cur, finish.cur);//利用finish.cur标记末尾
+        }
+        finish  = start;
+    }
+    template<class T, class Alloc>
+    typename deque<T,Alloc>::iterator deque<T,Alloc>::erase(iterator pos){
+        iterator next = pos+1;
+        difference_type index = pos - start;//清除点之前的元素个数
+        if(index < size() / 2){
+            //从前方移动次数少
+            MiniSTL::copy_backward(start, pos, pos);//向后移动一位
+            pop_front();
+        }else{
+            MiniSTL::copy(next, finish, pos);//向前移动一位
+            pop_back();
+        }
+        return start + index;
+    }
+
+    template<class T, class Alloc>
+    typename deque<T,Alloc>::iterator deque<T,Alloc>::erase(iterator first, iterator last){
+        if(first == start && last == finish){
+            clear();
+            return finish;//全删
+        }
+        else{
+            difference_type n = last - first;//清除区间的长度
+            difference_type elems_before = first - start ; //前方元素个数
+            if(elems_before < (size() - n)/ 2){
+                //前面个数少  删除之后，将前面的元素向后移动进行填补
+                MiniSTL::copy_backward(start, first, last);
+                iterator new_start = start + n;//标记新起点
+                destory(start, new_start);//析构多余元素
+                //释放多余缓冲区
+                for(map_pointer cur = start.node; cur < new_start.node; ++cur){
+                    node_allocator::deallocate(*cur, buffer_size());
+                }
+                start = new_start;
+            }else{
+                //前移开销低
+                MiniSTL::copy(last, finish, first);
+                iterator new_finish = finsh - n ;
+                destory(new_finish,finish);
+                //释放多余缓冲区
+                for(map_pointer cur = new_finish.node + 1; cur <= finish.node;++cur){
+                    node_allocator::deallocate(*cur, buffer_size());
+                }
+            }
+            return start + elems_before;
+        }
+    }
+
 
 
 } // namespace MiniSTL
