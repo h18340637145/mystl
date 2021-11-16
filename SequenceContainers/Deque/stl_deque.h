@@ -968,6 +968,122 @@ namespace MiniSTL
         }
     }
 
+    template<class T, class Alloc>
+    typename deque<T, Alloc>::iterator deque<T, Alloc>::insert(iterator pos, const value_type &value){
+        if(pos.cur == start.cur){
+            //在开头插入
+            push_front(value);
+            return start;
+        }else if(pos.cur == finish.cur){
+            push_back(value);
+            return finish - 1;
+        }else{
+            return insert_aux(pos, value);
+        }
+    }
 
+    template<class T, class Alloc>
+    void deque<T, Alloc>::fill_assign(size_type n ,const value_type & val){
+        if(n > size()){
+            //插入元素个数比当前容量大
+            //先填满  再将剩下的插入即可
+            MiniSTL::fill(begin(),end(),val );
+            insert(end(), n-size(),val);//  末尾添加  n-size（）个元素
+        }else{
+            erase(begin() + n, end());
+            //填充元素个数n没有当前容器容量大
+            //将多余的空间删除
+            MiniSTL::fill(begin(), end(),val);
+        }
+    }
 
+    template<class T, class Alloc>
+    template<class InputIterator>
+    //将一个区间的数赋值到start开始的位置上
+    void deque<T,Alloc>::assign_aux(InputIterator first, InputIterator last, input_iterator_tag){
+        iterator cur = start;
+        for(; first != last && cur != finish;++first, cur++)
+            *cur = *first;
+
+        if(first == last){
+            //放置结束
+            //后面清空
+            erase(cur, finish);
+        }else{
+            //未放置完，需要将后续插入
+            insert(cur, first, last);
+        }
+    }
+
+    template<class T , class Alloc>
+    template<class ForwardIterator>
+    void deque<T,  Alloc>::assign_aux(ForwardIterator first, ForwardIterator last, forward_iterator_tag){
+        size_type len = MiniSTL::distance(first,last);
+        if(len > size()){
+            //要放置的元素比当前空间大
+            //先放进来空间这么大的，再插入
+            ForwardIterator mid = first;
+            MiniSTL::advance(mid, size());
+            MiniSTL::copy(first,mid, start);
+            insert(end(), mid,last);//mid-last   插入到end()
+        }else{
+            erase(MiniSTL::copy(first, last, start), finish);
+        }
+    }
+
+    template<class T, class Alloc>
+    void deque<T,Alloc>::resize(size_type new_size, const value_type & val){
+        const size_type len = size();
+        //重新设置大小为new_size  初始值为val
+        if(new_size < len){
+            //新的大小没有之前的大
+            //后面的值都删除即可
+            erase(start + new_size, end());
+        }else{
+            //新大小很大
+            //需要插入剩下的值
+            insert(finish, new_size- len, val);
+        }
+    }
+
+    template<class T, class Alloc>
+    void deque<T,Alloc>::swap(deque & rhs) noexcept{
+        MiniSTL::swap(start,rhs.start);
+        MiniSTL::swap(finish , rhs.finish);
+        MiniSTL::swap(map, rhs.map);
+        MiniSTL::swap(map_size, rhs.map_size);
+    }
+
+    template<class T, class Alloc>
+    inline bool operator==(const deque<T,Alloc> &lhs, const deque<T,Alloc> & rhs){
+        return lhs.size() == rhs.size() && MiniSTL::equal(lhs.begin(), lhs.end(), rhs.begin());
+    }
+
+    template<class T, class Alloc>
+    inline bool operator!=(const deque<T,Alloc> &lhs, const deque<T,Alloc>&rhs){
+        return !(lhs == rhs);
+    }
+
+    template<class T, class Alloc>
+    inline bool operator<(const deque<T,Alloc> &lhs, const deque<T,Alloc> &rhs){
+        return MiniSTL::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),rhs.end());
+    }
+
+    template<class T, class Alloc>
+    inline bool operator>(const deque<T,Alloc> &lhs, const deque<T,Alloc> &rhs){
+        return rhs < lhs;
+    }
+
+    template<class T,class Alloc>
+    inline bool operator<=(const deque<T,Alloc> &lhs, const deque<T,Alloc> &rhs){
+        return !(rhs < lhs);
+    }
+    template<class T , class Alloc>
+    inline bool operator>=(const deque<T,Alloc> &lhs, const deque<T,Alloc> &rhs){
+        return !(lhs < rhs);
+    }
+    template<class T, class Alloc>
+    inline void swap(const deque<T,Alloc> & lhs, const deque<T,Alloc> &rhs){
+        lhs.swap(rhs);
+    }
 } // namespace MiniSTL
